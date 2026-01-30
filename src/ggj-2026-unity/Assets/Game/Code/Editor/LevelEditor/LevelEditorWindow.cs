@@ -18,6 +18,13 @@ namespace Game.Editor.LevelEditor
             EditPatrol = 5
         }
 
+        private enum BrushType
+        {
+            Single = 0,
+            Rectangle = 1,
+            Line = 2
+        }
+
         private static readonly Color GridColor = new(0.3f, 0.3f, 0.3f, 1f);
         private static readonly Color GridBackgroundColor = new(0.15f, 0.15f, 0.15f, 1f);
         private static readonly Color WallColor = new(0.6f, 0.6f, 0.6f, 1f);
@@ -27,10 +34,16 @@ namespace Game.Editor.LevelEditor
         private static readonly Color PatrolPathColor = new(1f, 0.7f, 0.3f, 1f);
         private static readonly Color WaypointColor = new(1f, 0.5f, 0f, 1f);
         private static readonly Color HoverColor = new(1f, 1f, 1f, 0.3f);
+        private static readonly Color RectPreviewColor = new(1f, 1f, 1f, 0.5f);
+        private static readonly Color ErasePreviewColor = new(1f, 0.3f, 0.3f, 0.5f);
 
         [SerializeField] private LevelData _levelData;
 
         private EditorTool _currentTool = EditorTool.None;
+        private BrushType _brushType = BrushType.Single;
+        private bool _isDraggingRect;
+        private Vector2Int _dragStartPos;
+        private Vector2Int _dragCurrentPos;
         private int _selectedEnemyIndex = -1;
         private Vector2 _scrollPosition;
         private Vector2 _gridOffset;
@@ -143,6 +156,14 @@ namespace Game.Editor.LevelEditor
                 _currentTool = EditorTool.EraseWall;
             }
 
+            // Brush type selector (only show for wall painting/erasing)
+            if (_currentTool == EditorTool.PaintWall || _currentTool == EditorTool.EraseWall)
+            {
+                GUILayout.Space(5f);
+                GUILayout.Label("Brush:", EditorStyles.miniLabel);
+                _brushType = (BrushType)EditorGUILayout.EnumPopup(_brushType, EditorStyles.toolbarPopup, GUILayout.Width(80f));
+            }
+
             if (GUILayout.Toggle(_currentTool == EditorTool.PlacePlayer, "Player", EditorStyles.toolbarButton))
             {
                 _currentTool = EditorTool.PlacePlayer;
@@ -208,14 +229,23 @@ namespace Game.Editor.LevelEditor
             // Draw enemy spawns
             DrawEnemySpawns(offset);
 
-            // Draw hover highlight
-            Vector2 mousePos = Event.current.mousePosition;
-            if (rect.Contains(mousePos + new Vector2(rect.x, rect.y)))
+            // Draw rectangle/line preview when dragging
+            if (_isDraggingRect)
             {
-                Vector2Int gridPos = ScreenToGrid(mousePos, offset);
-                if (_levelData.IsValidGridPosition(gridPos))
+                Color previewColor = _currentTool == EditorTool.EraseWall ? ErasePreviewColor : RectPreviewColor;
+                DrawBrushPreview(offset, previewColor);
+            }
+            else
+            {
+                // Draw hover highlight
+                Vector2 mousePos = Event.current.mousePosition;
+                if (rect.Contains(mousePos + new Vector2(rect.x, rect.y)))
                 {
-                    DrawCellHighlight(gridPos, offset, HoverColor);
+                    Vector2Int gridPos = ScreenToGrid(mousePos, offset);
+                    if (_levelData.IsValidGridPosition(gridPos))
+                    {
+                        DrawCellHighlight(gridPos, offset, HoverColor);
+                    }
                 }
             }
 
@@ -355,6 +385,76 @@ namespace Game.Editor.LevelEditor
             Vector2 screenPos = GridToScreen(gridPos, offset);
             Rect cellRect = new(screenPos.x, screenPos.y, _zoom, _zoom);
             EditorGUI.DrawRect(cellRect, color);
+        }
+
+        private void DrawBrushPreview(Vector2 offset, Color color)
+        {
+            if (_brushType == BrushType.Rectangle)
+            {
+                // Draw filled rectangle preview
+                int minX = Mathf.Min(_dragStartPos.x, _dragCurrentPos.x);
+                int maxX = Mathf.Max(_dragStartPos.x, _dragCurrentPos.x);
+                int minY = Mathf.Min(_dragStartPos.y, _dragCurrentPos.y);
+                int maxY = Mathf.Max(_dragStartPos.y, _dragCurrentPos.y);
+
+                for (int x = minX; x <= maxX; x++)
+                {
+                    for (int y = minY; y <= maxY; y++)
+                    {
+                        var pos = new Vector2Int(x, y);
+                        if (_levelData.IsValidGridPosition(pos))
+                        {
+                            DrawCellHighlight(pos, offset, color);
+                        }
+                    }
+                }
+            }
+            else if (_brushType == BrushType.Line)
+            {
+                // Draw line preview using Bresenham's algorithm
+                foreach (var pos in GetLinePositions(_dragStartPos, _dragCurrentPos))
+                {
+                    if (_levelData.IsValidGridPosition(pos))
+                    {
+                        DrawCellHighlight(pos, offset, color);
+                    }
+                }
+            }
+        }
+
+        private static System.Collections.Generic.IEnumerable<Vector2Int> GetLinePositions(Vector2Int start, Vector2Int end)
+        {
+            int x0 = start.x, y0 = start.y;
+            int x1 = end.x, y1 = end.y;
+
+            int dx = Mathf.Abs(x1 - x0);
+            int dy = Mathf.Abs(y1 - y0);
+            int sx = x0 < x1 ? 1 : -1;
+            int sy = y0 < y1 ? 1 : -1;
+            int err = dx - dy;
+
+            while (true)
+            {
+                yield return new Vector2Int(x0, y0);
+
+                if (x0 == x1 && y0 == y1)
+                {
+                    break;
+                }
+
+                int e2 = 2 * err;
+                if (e2 > -dy)
+                {
+                    err -= dy;
+                    x0 += sx;
+                }
+
+                if (e2 < dx)
+                {
+                    err += dx;
+                    y0 += sy;
+                }
+            }
         }
 
         private void DrawSidebar(Rect rect)
@@ -695,6 +795,38 @@ namespace Game.Editor.LevelEditor
 
             Vector2Int gridPos = ScreenToGrid(localMousePos, offset);
 
+            // Handle rectangle/line drag end - must happen before validity check
+            // because mouse may be outside valid grid when released
+            if (_isDraggingRect && e.type == EventType.MouseUp && e.button == 0)
+            {
+                ApplyBrush();
+                _isDraggingRect = false;
+                e.Use();
+                Repaint();
+                return;
+            }
+
+            // Cancel drag on escape - also before validity check
+            if (_isDraggingRect && e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape)
+            {
+                _isDraggingRect = false;
+                e.Use();
+                Repaint();
+                return;
+            }
+
+            // Update drag position - clamp to valid grid
+            if (_isDraggingRect && e.type == EventType.MouseDrag && e.button == 0)
+            {
+                _dragCurrentPos = new Vector2Int(
+                    Mathf.Clamp(gridPos.x, 0, _levelData.GridSize.x - 1),
+                    Mathf.Clamp(gridPos.y, 0, _levelData.GridSize.y - 1)
+                );
+                e.Use();
+                Repaint();
+                return;
+            }
+
             if (!_levelData.IsValidGridPosition(gridPos))
             {
                 return;
@@ -703,20 +835,33 @@ namespace Game.Editor.LevelEditor
             // Left click actions
             if (e.type == EventType.MouseDown && e.button == 0)
             {
-                HandleToolClick(gridPos);
-                e.Use();
+                bool isWallTool = _currentTool == EditorTool.PaintWall || _currentTool == EditorTool.EraseWall;
+
+                // Start rectangle/line drag for wall tools with non-single brush
+                if (isWallTool && _brushType != BrushType.Single)
+                {
+                    _isDraggingRect = true;
+                    _dragStartPos = gridPos;
+                    _dragCurrentPos = gridPos;
+                    e.Use();
+                }
+                else
+                {
+                    HandleToolClick(gridPos);
+                    e.Use();
+                }
             }
 
-            // Drag for painting
-            if (e.type == EventType.MouseDrag && e.button == 0)
+            // Drag for painting with single brush
+            if (!_isDraggingRect && e.type == EventType.MouseDrag && e.button == 0)
             {
-                if (_currentTool == EditorTool.PaintWall)
+                if (_currentTool == EditorTool.PaintWall && _brushType == BrushType.Single)
                 {
                     Undo.RecordObject(_levelData, "Paint Wall");
                     _levelData.AddWall(gridPos);
                     e.Use();
                 }
-                else if (_currentTool == EditorTool.EraseWall)
+                else if (_currentTool == EditorTool.EraseWall && _brushType == BrushType.Single)
                 {
                     Undo.RecordObject(_levelData, "Erase Wall");
                     _levelData.RemoveWall(gridPos);
@@ -733,6 +878,59 @@ namespace Game.Editor.LevelEditor
             }
 
             Repaint();
+        }
+
+        private void ApplyBrush()
+        {
+            bool isPaint = _currentTool == EditorTool.PaintWall;
+            string actionName = isPaint ? "Paint Walls" : "Erase Walls";
+            Undo.RecordObject(_levelData, actionName);
+
+            if (_brushType == BrushType.Rectangle)
+            {
+                int minX = Mathf.Min(_dragStartPos.x, _dragCurrentPos.x);
+                int maxX = Mathf.Max(_dragStartPos.x, _dragCurrentPos.x);
+                int minY = Mathf.Min(_dragStartPos.y, _dragCurrentPos.y);
+                int maxY = Mathf.Max(_dragStartPos.y, _dragCurrentPos.y);
+
+                for (int x = minX; x <= maxX; x++)
+                {
+                    for (int y = minY; y <= maxY; y++)
+                    {
+                        var pos = new Vector2Int(x, y);
+                        if (_levelData.IsValidGridPosition(pos))
+                        {
+                            if (isPaint)
+                            {
+                                _levelData.AddWall(pos);
+                            }
+                            else
+                            {
+                                _levelData.RemoveWall(pos);
+                            }
+                        }
+                    }
+                }
+            }
+            else if (_brushType == BrushType.Line)
+            {
+                foreach (var pos in GetLinePositions(_dragStartPos, _dragCurrentPos))
+                {
+                    if (_levelData.IsValidGridPosition(pos))
+                    {
+                        if (isPaint)
+                        {
+                            _levelData.AddWall(pos);
+                        }
+                        else
+                        {
+                            _levelData.RemoveWall(pos);
+                        }
+                    }
+                }
+            }
+
+            EditorUtility.SetDirty(_levelData);
         }
 
         private void HandleToolClick(Vector2Int gridPos)

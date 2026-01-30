@@ -1,21 +1,29 @@
 using Game.Player;
 using Unity.Cinemachine;
 using UnityEngine;
-using VContainer;
 
 namespace Game.Camera
 {
     public class CameraTargetConnector : MonoBehaviour
     {
         [SerializeField] private CinemachineCamera _cinemachineCamera;
+        [SerializeField] private bool _autoFindPlayer = true;
 
-        [Inject]
-        public void Construct(PlayerCameraTarget playerCameraTarget)
+        private void Start()
         {
-            if (_cinemachineCamera != null && playerCameraTarget != null)
+            // If camera already has a target, don't override
+            if (_cinemachineCamera != null && _cinemachineCamera.Follow != null)
             {
-                _cinemachineCamera.Follow = playerCameraTarget.CameraTarget;
-                _cinemachineCamera.LookAt = playerCameraTarget.CameraTarget;
+                return;
+            }
+
+            if (_autoFindPlayer)
+            {
+                var playerTarget = FindFirstObjectByType<PlayerCameraTarget>();
+                if (playerTarget != null)
+                {
+                    SetTarget(playerTarget.CameraTarget);
+                }
             }
         }
 
