@@ -30,6 +30,8 @@ namespace Game.AI
 
         [Header("Movement")]
         [SerializeField] private float _followSpeed = 2f;
+        [SerializeField] private float _followRotationSpeed = 180f;
+        [SerializeField] private float _rotateBeforeMoveThreshold = 30f;
 
         [Header("Search")]
         [SerializeField] private float _searchDuration = 3f;
@@ -47,6 +49,8 @@ namespace Game.AI
         private bool _wasDetecting;
         private bool _isSearchScanning;
         private Quaternion _searchStartRotation;
+        private bool _isRotatingBeforeFollow;
+        private Quaternion _followTargetRotation;
 
         public EnemyState CurrentState => _currentState;
         public bool IsPlayerVisible => _visionCone != null && _visionCone.CurrentTarget != null;
@@ -99,8 +103,8 @@ namespace Game.AI
             // Behavior tree structure:
             // Root (Selector)
             // ├── Alert branch: IsFullyDetected? -> Alert
-            // ├── Detecting branch: IsPlayerVisible? -> FollowPlayer
-            // ├── Searching branch: IsSearching? -> Search
+            // ├── Detecting branch: IsPlayerVisible OR (wasDetecting AND not at destination)? -> GoToLastKnownPosition
+            // ├── Searching branch: IsSearching? -> Search (scan in place)
             // └── Patrol branch: Patrol
 
             _behaviorTree = new BehaviorTreeBuilder(gameObject)
@@ -110,12 +114,12 @@ namespace Game.AI
                         .Condition("IsFullyDetected", () => _visionCone != null && _visionCone.IsDetected)
                         .Do("Alert", DoAlert)
                     .End()
-                    // Detecting branch - follow player
+                    // Detecting branch - go to player's position (continues even if player not visible)
                     .Sequence()
-                        .Condition("IsPlayerVisible", () => IsPlayerVisible)
-                        .Do("FollowPlayer", DoDetecting)
+                        .Condition("ShouldPursue", ShouldPursue)
+                        .Do("GoToLastKnownPosition", DoDetecting)
                     .End()
-                    // Searching branch - look around after losing player
+                    // Searching branch - look around after reaching last known position
                     .Sequence()
                         .Condition("IsSearching", () => _currentState == EnemyState.Searching)
                         .Do("Search", DoSearching)
@@ -124,6 +128,32 @@ namespace Game.AI
                     .Do("Patrol", DoPatrol)
                 .End()
                 .Build();
+        }
+
+        private bool ShouldPursue()
+        {
+            // Continue pursuing if player is visible
+            if (IsPlayerVisible)
+            {
+                return true;
+            }
+
+            // Continue pursuing if we were detecting and haven't reached the last known position
+            if (_wasDetecting && _currentState == EnemyState.Detecting)
+            {
+                // Check if we've reached the destination
+                if (!_navAgent.pathPending)
+                {
+                    // No path or reached destination - stop pursuing
+                    if (!_navAgent.hasPath || _navAgent.remainingDistance <= _navAgent.stoppingDistance)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            return false;
         }
 
         private TaskStatus DoAlert()
@@ -149,16 +179,58 @@ namespace Game.AI
                 SetState(EnemyState.Detecting);
                 _patrolController.StopPatrol();
                 _wasDetecting = true;
+                _isRotatingBeforeFollow = false;
+                _isSearchScanning = false;
                 _navAgent.speed = _followSpeed;
+                _navAgent.updateRotation = true;
             }
 
-            // Track last known position
+            // Update last known position only when player is visible
             if (_visionCone.CurrentTarget != null)
             {
                 _lastKnownPosition = _visionCone.CurrentTarget.position;
             }
 
-            // Move towards player using NavMesh
+            // Check if we need to rotate first before moving
+            Vector3 directionToTarget = (_lastKnownPosition - transform.position).normalized;
+            directionToTarget.y = 0f;
+
+            if (directionToTarget.sqrMagnitude > 0.001f)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+                float angleToTarget = Quaternion.Angle(transform.rotation, targetRotation);
+
+                if (angleToTarget > _rotateBeforeMoveThreshold && !_isRotatingBeforeFollow)
+                {
+                    _isRotatingBeforeFollow = true;
+                    _followTargetRotation = targetRotation;
+                    _navAgent.isStopped = true;
+                    _navAgent.updateRotation = false;
+                    SetWalking(false);
+                }
+
+                if (_isRotatingBeforeFollow)
+                {
+                    float currentAngle = Quaternion.Angle(transform.rotation, _followTargetRotation);
+                    if (currentAngle < 1f)
+                    {
+                        transform.rotation = _followTargetRotation;
+                        _isRotatingBeforeFollow = false;
+                        _navAgent.updateRotation = true;
+                    }
+                    else
+                    {
+                        transform.rotation = Quaternion.RotateTowards(
+                            transform.rotation,
+                            _followTargetRotation,
+                            _followRotationSpeed * Time.deltaTime
+                        );
+                        return TaskStatus.Continue;
+                    }
+                }
+            }
+
+            // Move towards last known position using NavMesh
             _navAgent.isStopped = false;
             _navAgent.SetDestination(_lastKnownPosition);
             SetWalking(_navAgent.velocity.sqrMagnitude > 0.01f);
@@ -168,13 +240,22 @@ namespace Game.AI
 
         private TaskStatus DoSearching()
         {
-            // Initialize search state
+            // If player becomes visible during search, interrupt and pursue
+            if (IsPlayerVisible)
+            {
+                _isSearchScanning = false;
+                _navAgent.updateRotation = true;
+                return TaskStatus.Failure; // Let detecting branch handle it
+            }
+
+            // Initialize search scan (we've already arrived at last known position)
             if (!_isSearchScanning)
             {
                 _isSearchScanning = true;
                 _searchStartRotation = transform.rotation;
                 _searchTimer = 0f;
                 _navAgent.isStopped = true;
+                _navAgent.updateRotation = false;
                 SetWalking(false);
             }
 
@@ -188,7 +269,9 @@ namespace Game.AI
                 // Search complete, return to patrol
                 _isSearchScanning = false;
                 _wasDetecting = false;
+                _navAgent.updateRotation = true;
                 SetState(EnemyState.Patrol);
+                _patrolController.StartPatrol();
                 return TaskStatus.Success;
             }
 
@@ -199,8 +282,9 @@ namespace Game.AI
         {
             if (_wasDetecting)
             {
-                // Just lost sight of player, enter search mode
-                _wasDetecting = false;
+                // Reached last known position, enter search mode
+                _isSearchScanning = false;
+                _isRotatingBeforeFollow = false;
                 SetState(EnemyState.Searching);
                 return TaskStatus.Failure; // Let search branch handle it
             }

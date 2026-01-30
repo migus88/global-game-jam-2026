@@ -208,12 +208,13 @@ namespace Game.Detection
             }
             else
             {
+                // Clear target immediately when player leaves vision cone
+                _currentTarget = null;
                 _detectionProgress = Mathf.Clamp01(_detectionProgress - Time.deltaTime / timeToLose);
 
                 if (_detectionProgress <= 0f && _isDetected)
                 {
                     _isDetected = false;
-                    _currentTarget = null;
                     LostTarget?.Invoke();
                 }
             }

@@ -51,9 +51,10 @@ MonoBehaviour:
   _patrolWaypoints: []
   _patrolSpeed: 3
   _rotationSpeed: 180
+  _rotateBeforeMoveThreshold: 30
   _overrideObservationSettings: 0
   _scanAngle: 120
-  _scanSpeed: 90
+  _scanSpeed: 45
   _pauseAtEnds: 0.3
 --- !u!114 &7839184589496811335
 MonoBehaviour:
@@ -69,6 +70,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.AI.EnemyBehavior
   _visionCone: {fileID: 3618264122071139747}
   _followSpeed: 1.3
+  _followRotationSpeed: 180
+  _rotateBeforeMoveThreshold: 30
   _searchDuration: 3
   _searchScanAngle: 120
   _searchScanSpeed: 90

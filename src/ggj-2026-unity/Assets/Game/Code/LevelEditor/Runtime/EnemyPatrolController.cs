@@ -20,6 +20,7 @@ namespace Game.LevelEditor.Runtime
         [Header("Movement")]
         [SerializeField] private float _patrolSpeed = 3f;
         [SerializeField] private float _rotationSpeed = 180f;
+        [SerializeField] private float _rotateBeforeMoveThreshold = 30f;
 
         [Header("Observation Override")]
         [SerializeField] private bool _overrideObservationSettings;
@@ -290,6 +291,33 @@ namespace Game.LevelEditor.Runtime
 
         private async UniTask MoveToWaypointAsync(Vector3 targetPosition, CancellationToken ct)
         {
+            // Calculate direction to target
+            Vector3 directionToTarget = (targetPosition - transform.position).normalized;
+            directionToTarget.y = 0f;
+
+            if (directionToTarget.sqrMagnitude > 0.001f)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+                float angleToTarget = Quaternion.Angle(transform.rotation, targetRotation);
+
+                // If angle is large, rotate first before moving
+                if (angleToTarget > _rotateBeforeMoveThreshold)
+                {
+                    _navAgent.isStopped = true;
+                    _navAgent.updateRotation = false;
+                    SetWalking(false);
+
+                    await RotateTowardsAsync(targetRotation, _rotationSpeed, ct);
+
+                    if (ct.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    _navAgent.updateRotation = true;
+                }
+            }
+
             _navAgent.isStopped = false;
             _navAgent.SetDestination(targetPosition);
             SetWalking(true);
@@ -312,6 +340,27 @@ namespace Game.LevelEditor.Runtime
             }
 
             SetWalking(false);
+        }
+
+        private async UniTask RotateTowardsAsync(Quaternion targetRotation, float speed, CancellationToken ct)
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                float angle = Quaternion.Angle(transform.rotation, targetRotation);
+                if (angle < 1f)
+                {
+                    transform.rotation = targetRotation;
+                    break;
+                }
+
+                transform.rotation = Quaternion.RotateTowards(
+                    transform.rotation,
+                    targetRotation,
+                    speed * Time.deltaTime
+                );
+
+                await UniTask.Yield(ct);
+            }
         }
 
 #if UNITY_EDITOR
