@@ -42,6 +42,7 @@ namespace Game.Sound
         private bool _isPlaying;
         private bool _isOnCooldown;
         private bool _isLocked;
+        private AudioSource _currentAudioSource;
         private readonly Collider[] _detectionResults = new Collider[1];
 
         public GameLockTags LockTags => GameLockTags.EnemyAI;
@@ -90,6 +91,16 @@ namespace Game.Sound
         {
             _isLocked = true;
             HideText();
+            StopCurrentAudio();
+        }
+
+        private void StopCurrentAudio()
+        {
+            if (_currentAudioSource != null && _currentAudioSource.isPlaying)
+            {
+                _currentAudioSource.Stop();
+                _currentAudioSource = null;
+            }
         }
 
         public void HandleUnlocking()
@@ -168,7 +179,8 @@ namespace Game.Sound
 
             _isPlaying = true;
 
-            var phrase = _soundManager.PlayRandomAmbientPhrase(transform.position);
+            var (phrase, audioSource) = _soundManager.PlayRandomAmbientPhrase(transform.position);
+            _currentAudioSource = audioSource;
 
             if (phrase == null)
             {
@@ -194,6 +206,7 @@ namespace Game.Sound
             }
 
             HideText();
+            _currentAudioSource = null;
             _isPlaying = false;
 
             StartCooldown().Forget();

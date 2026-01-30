@@ -101,22 +101,48 @@ namespace Game.Sound
             _backgroundMusicSource.volume = Mathf.Clamp01(volume);
         }
 
-        public AmbientPhrase PlayRandomAmbientPhrase(Vector3 position)
+        public (AmbientPhrase phrase, AudioSource source) PlayRandomAmbientPhrase(Vector3 position)
         {
             if (_isDisposed)
             {
-                return null;
+                return (null, null);
             }
 
             var phrase = _configuration.GetRandomAmbientPhrase();
 
             if (phrase?.Clip == null)
             {
+                return (null, null);
+            }
+
+            var source = PlayClipAtPositionWithSource(phrase.Clip, position);
+            return (phrase, source);
+        }
+
+        public AudioSource PlayClipAtPositionWithSource(AudioClip clip, Vector3 position, float volume = 1f)
+        {
+            if (_isDisposed || clip == null)
+            {
                 return null;
             }
 
-            PlayClipAtPosition(phrase.Clip, position);
-            return phrase;
+            var source = GetPooledSource();
+
+            if (source == null)
+            {
+                AudioSource.PlayClipAtPoint(clip, position, volume);
+                return null;
+            }
+
+            source.transform.position = position;
+            source.spatialBlend = 1f;
+            source.volume = volume;
+            source.clip = clip;
+            source.gameObject.SetActive(true);
+            source.Play();
+
+            ReturnToPoolAfterPlaying(source, clip.length).Forget();
+            return source;
         }
 
         public void PlaySoundEffect(SoundEffectType type, Vector3? position = null)
