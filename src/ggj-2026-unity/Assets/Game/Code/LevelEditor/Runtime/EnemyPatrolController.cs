@@ -6,18 +6,24 @@ using UnityEngine;
 
 namespace Game.LevelEditor.Runtime
 {
+    [RequireComponent(typeof(CharacterController))]
     public class EnemyPatrolController : MonoBehaviour
     {
         [SerializeField] private float _moveSpeed = 3f;
         [SerializeField] private float _rotationSpeed = 180f;
         [SerializeField] private float _smoothTurnRadius = 0.5f;
+        [SerializeField] private float _gravity = -9.81f;
 
         private List<PatrolWaypoint> _patrolPath;
         private LevelData _levelData;
+        private Vector3 _spawnPosition;
         private Animator _animator;
+        private CharacterController _characterController;
         private CancellationTokenSource _patrolCts;
         private int _currentWaypointIndex;
         private bool _isPatrolling;
+        private bool _movingForward = true;
+        private float _verticalVelocity;
 
         public bool IsPatrolling => _isPatrolling;
         public int CurrentWaypointIndex => _currentWaypointIndex;
@@ -25,6 +31,7 @@ namespace Game.LevelEditor.Runtime
         private void Awake()
         {
             _animator = GetComponent<Animator>();
+            _characterController = GetComponent<CharacterController>();
         }
 
         private void OnDestroy()
@@ -32,19 +39,15 @@ namespace Game.LevelEditor.Runtime
             StopPatrol();
         }
 
-        public void Initialize(List<PatrolWaypoint> patrolPath, LevelData levelData)
+        public void Initialize(List<PatrolWaypoint> patrolPath, LevelData levelData, Vector3 spawnPosition)
         {
             _patrolPath = patrolPath;
             _levelData = levelData;
+            _spawnPosition = spawnPosition;
         }
 
         public void StartPatrol()
         {
-            if (_patrolPath == null || _patrolPath.Count == 0)
-            {
-                return;
-            }
-
             StopPatrol();
             _patrolCts = new CancellationTokenSource();
             PatrolLoopAsync(_patrolCts.Token).Forget();
@@ -62,25 +65,96 @@ namespace Game.LevelEditor.Runtime
             _isPatrolling = false;
         }
 
+        private List<Vector3> BuildFullPath()
+        {
+            var fullPath = new List<Vector3> { _spawnPosition };
+
+            if (_patrolPath != null)
+            {
+                foreach (var waypoint in _patrolPath)
+                {
+                    fullPath.Add(_levelData.GridToWorld(waypoint.GridPosition));
+                }
+            }
+
+            return fullPath;
+        }
+
+        private PatrolWaypoint GetWaypointData(int pathIndex)
+        {
+            // Index 0 is spawn position (no waypoint data)
+            if (pathIndex <= 0 || _patrolPath == null || pathIndex > _patrolPath.Count)
+            {
+                return null;
+            }
+
+            return _patrolPath[pathIndex - 1];
+        }
+
         private async UniTaskVoid PatrolLoopAsync(CancellationToken ct)
         {
             _isPatrolling = true;
             _currentWaypointIndex = 0;
+            _movingForward = true;
+
+            var fullPath = BuildFullPath();
+
+            // Need at least 2 points to patrol (spawn + 1 waypoint, or just spawn means no movement)
+            if (fullPath.Count < 2)
+            {
+                _isPatrolling = false;
+                return;
+            }
 
             while (!ct.IsCancellationRequested)
             {
-                var waypoint = _patrolPath[_currentWaypointIndex];
-                int nextIndex = (_currentWaypointIndex + 1) % _patrolPath.Count;
-                var nextWaypoint = _patrolPath[nextIndex];
+                // Determine next index based on direction
+                int nextIndex;
+                if (_movingForward)
+                {
+                    nextIndex = _currentWaypointIndex + 1;
+                    if (nextIndex >= fullPath.Count)
+                    {
+                        // Reached end, reverse direction
+                        _movingForward = false;
+                        nextIndex = _currentWaypointIndex - 1;
+                    }
+                }
+                else
+                {
+                    nextIndex = _currentWaypointIndex - 1;
+                    if (nextIndex < 0)
+                    {
+                        // Reached start, reverse direction
+                        _movingForward = true;
+                        nextIndex = _currentWaypointIndex + 1;
+                    }
+                }
 
-                Vector3 targetPosition = _levelData.GridToWorld(waypoint.GridPosition);
-                Vector3 nextPosition = _levelData.GridToWorld(nextWaypoint.GridPosition);
+                // Clamp to valid range
+                nextIndex = Mathf.Clamp(nextIndex, 0, fullPath.Count - 1);
 
-                bool hasDelay = waypoint.WaitDelay > 0f;
-                bool hasAnimatorAction = !string.IsNullOrEmpty(waypoint.AnimatorParameterName);
+                if (nextIndex == _currentWaypointIndex)
+                {
+                    // Nowhere to go
+                    await UniTask.Yield(ct);
+                    continue;
+                }
+
+                Vector3 targetPosition = fullPath[nextIndex];
+
+                // Get waypoint data for delay/animator (only waypoints have this, not spawn)
+                var waypointData = GetWaypointData(nextIndex);
+                bool hasDelay = waypointData?.WaitDelay > 0f;
+                bool hasAnimatorAction = !string.IsNullOrEmpty(waypointData?.AnimatorParameterName);
                 bool shouldStop = hasDelay || hasAnimatorAction;
 
-                await MoveToWaypointAsync(targetPosition, nextPosition, shouldStop, ct);
+                // Determine next-next position for smooth blending
+                int nextNextIndex = _movingForward ? nextIndex + 1 : nextIndex - 1;
+                nextNextIndex = Mathf.Clamp(nextNextIndex, 0, fullPath.Count - 1);
+                Vector3 nextNextPosition = fullPath[nextNextIndex];
+
+                await MoveToWaypointAsync(targetPosition, nextNextPosition, shouldStop, ct);
 
                 if (ct.IsCancellationRequested)
                 {
@@ -90,14 +164,14 @@ namespace Game.LevelEditor.Runtime
                 // Apply animator parameter if specified
                 if (_animator != null && hasAnimatorAction)
                 {
-                    _animator.SetBool(waypoint.AnimatorParameterName, waypoint.AnimatorParameterValue);
+                    _animator.SetBool(waypointData.AnimatorParameterName, waypointData.AnimatorParameterValue);
                 }
 
                 // Wait at waypoint
                 if (hasDelay)
                 {
                     await UniTask.Delay(
-                        (int)(waypoint.WaitDelay * 1000),
+                        (int)(waypointData.WaitDelay * 1000),
                         cancellationToken: ct
                     );
                 }
@@ -107,7 +181,6 @@ namespace Game.LevelEditor.Runtime
                     break;
                 }
 
-                // Move to next waypoint
                 _currentWaypointIndex = nextIndex;
 
                 // Always yield at least once per loop iteration to prevent freezing
@@ -148,7 +221,6 @@ namespace Game.LevelEditor.Runtime
                 {
                     if (distance <= 0.05f)
                     {
-                        transform.position = new Vector3(targetPosition.x, currentPos.y, targetPosition.z);
                         break;
                     }
                 }
@@ -163,7 +235,6 @@ namespace Game.LevelEditor.Runtime
                     // Smooth pass-through: start blending towards next waypoint when close
                     if (distance <= _smoothTurnRadius)
                     {
-                        // Blend direction towards next waypoint
                         Vector3 toNext = nextPosition - targetPosition;
                         toNext.y = 0f;
 
@@ -190,10 +261,20 @@ namespace Game.LevelEditor.Runtime
                         _rotationSpeed * Time.deltaTime
                     );
 
-                    // Move towards target direction (not transform.forward)
-                    float step = _moveSpeed * Time.deltaTime;
-                    Vector3 newPosition = currentPos + moveDirection * step;
-                    transform.position = newPosition;
+                    // Apply gravity
+                    if (_characterController.isGrounded)
+                    {
+                        _verticalVelocity = -0.5f;
+                    }
+                    else
+                    {
+                        _verticalVelocity += _gravity * Time.deltaTime;
+                    }
+
+                    // Move using CharacterController
+                    Vector3 move = moveDirection * (_moveSpeed * Time.deltaTime);
+                    move.y = _verticalVelocity * Time.deltaTime;
+                    _characterController.Move(move);
                 }
                 else
                 {

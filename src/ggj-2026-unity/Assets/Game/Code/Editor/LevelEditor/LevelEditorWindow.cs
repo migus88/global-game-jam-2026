@@ -418,12 +418,16 @@ namespace Game.Editor.LevelEditor
                 if (clicked && !isSelected)
                 {
                     _selectedEnemyIndex = i;
+                    LevelDataEditor.SelectedEnemyIndex = i;
                     RebuildWaypointList();
+                    SceneView.RepaintAll();
                 }
                 else if (!clicked && isSelected)
                 {
                     _selectedEnemyIndex = -1;
+                    LevelDataEditor.SelectedEnemyIndex = -1;
                     RebuildWaypointList();
+                    SceneView.RepaintAll();
                 }
 
                 if (GUILayout.Button("X", GUILayout.Width(20f)))
@@ -435,7 +439,9 @@ namespace Game.Editor.LevelEditor
                         _selectedEnemyIndex = _levelData.EnemySpawns.Count - 1;
                     }
 
+                    LevelDataEditor.SelectedEnemyIndex = _selectedEnemyIndex;
                     RebuildWaypointList();
+                    SceneView.RepaintAll();
                     break;
                 }
 
@@ -737,7 +743,9 @@ namespace Game.Editor.LevelEditor
                     if (spawn != null)
                     {
                         _selectedEnemyIndex = _levelData.EnemySpawns.Count - 1;
+                        LevelDataEditor.SelectedEnemyIndex = _selectedEnemyIndex;
                         RebuildWaypointList();
+                        SceneView.RepaintAll();
                     }
 
                     break;

@@ -302,10 +302,29 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6333945810269967276, guid: a1a802ecaf6775746bb2a929fb554ad8, type: 3}
+      propertyPath: Priority.Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6333945810269967276, guid: a1a802ecaf6775746bb2a929fb554ad8, type: 3}
+      propertyPath: Priority.m_Value
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 6333945810269967276, guid: a1a802ecaf6775746bb2a929fb554ad8, type: 3}
+      propertyPath: m_LegacyPriority
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6333945810269967276, guid: a1a802ecaf6775746bb2a929fb554ad8, type: 3}
+      propertyPath: m_StreamingVersion
+      value: 20241001
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2070925441746177671, guid: a1a802ecaf6775746bb2a929fb554ad8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1636875488}
   m_SourcePrefab: {fileID: 100100000, guid: a1a802ecaf6775746bb2a929fb554ad8, type: 3}
 --- !u!1 &505702789
 GameObject:
@@ -716,7 +735,7 @@ MonoBehaviour:
   autoInjectGameObjects:
   - {fileID: 0}
   _gameConfiguration: {fileID: 11400000, guid: acf5897ae8ac74e32bca8a98dbf8317d, type: 2}
-  _levelConfiguration: {fileID: 0}
+  _levelConfiguration: {fileID: 11400000, guid: e7ee045d96bb645279c2ee73acfd08fc, type: 2}
 --- !u!4 &1250384661
 Transform:
   m_ObjectHideFlags: 0
@@ -750,6 +769,35 @@ MonoBehaviour:
   autoInjectGameObjects: []
   _levelToLoad: {fileID: 11400000, guid: 589c36068f0b74afd9551cf360630748, type: 2}
   _levelConfiguration: {fileID: 11400000, guid: e7ee045d96bb645279c2ee73acfd08fc, type: 2}
+--- !u!1 &1636875483 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2070925441746177671, guid: a1a802ecaf6775746bb2a929fb554ad8, type: 3}
+  m_PrefabInstance: {fileID: 257584472}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1636875486 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6333945810269967276, guid: a1a802ecaf6775746bb2a929fb554ad8, type: 3}
+  m_PrefabInstance: {fileID: 257584472}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1636875483}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
+--- !u!114 &1636875488
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1636875483}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2fe46b2bd1934b0fa2ea52c978d1354, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Camera.CameraTargetConnector
+  _cinemachineCamera: {fileID: 1636875486}
 --- !u!1 &2116198337
 GameObject:
   m_ObjectHideFlags: 0

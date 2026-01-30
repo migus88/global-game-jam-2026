@@ -13,7 +13,10 @@ namespace Game.Editor.LevelEditor
         private static readonly Color PlayerSpawnColor = new(0.2f, 0.5f, 1f, 0.8f);
         private static readonly Color EnemySpawnColor = new(1f, 0.3f, 0.3f, 0.8f);
         private static readonly Color PatrolPathColor = new(1f, 0.8f, 0.2f, 0.8f);
+        private static readonly Color PatrolPathBlockedColor = new(1f, 0f, 0f, 1f);
         private static readonly Color WaypointColor = new(1f, 0.6f, 0f, 0.9f);
+
+        public static int SelectedEnemyIndex { get; set; } = -1;
 
         private LevelData _levelData;
 
@@ -128,16 +131,17 @@ namespace Game.Editor.LevelEditor
             for (int i = 0; i < _levelData.EnemySpawns.Count; i++)
             {
                 var spawn = _levelData.EnemySpawns[i];
-                DrawEnemySpawn(spawn, i);
+                bool isSelected = i == SelectedEnemyIndex;
+                DrawEnemySpawn(spawn, i, isSelected);
             }
         }
 
-        private void DrawEnemySpawn(EnemySpawnData spawn, int index)
+        private void DrawEnemySpawn(EnemySpawnData spawn, int index, bool isSelected)
         {
             Vector3 worldPos = _levelData.GridToWorld(spawn.SpawnPosition);
 
             // Draw spawn disc
-            Handles.color = EnemySpawnColor;
+            Handles.color = isSelected ? new Color(1f, 0.8f, 0.2f, 1f) : EnemySpawnColor;
             Handles.DrawSolidDisc(worldPos, Vector3.up, _levelData.CellSize * 0.25f);
 
             // Draw direction arrow
@@ -150,8 +154,8 @@ namespace Game.Editor.LevelEditor
             string label = GetAssetReferenceName(spawn.EnemyPrefab, index);
             Handles.Label(worldPos + Vector3.up * 0.3f, label);
 
-            // Draw patrol path
-            DrawPatrolPath(spawn, worldPos);
+            // Draw patrol path with wall validation for selected enemy
+            DrawPatrolPath(spawn, worldPos, isSelected);
         }
 
         private static string GetAssetReferenceName(AssetReferenceGameObject assetRef, int index)
@@ -174,15 +178,14 @@ namespace Game.Editor.LevelEditor
             return $"Enemy {index}";
         }
 
-        private void DrawPatrolPath(EnemySpawnData spawn, Vector3 spawnWorldPos)
+        private void DrawPatrolPath(EnemySpawnData spawn, Vector3 spawnWorldPos, bool validateWalls)
         {
             if (spawn.PatrolPath.Count == 0)
             {
                 return;
             }
 
-            Handles.color = PatrolPathColor;
-
+            Vector2Int previousGridPos = spawn.SpawnPosition;
             Vector3 previousPos = spawnWorldPos;
 
             for (int i = 0; i < spawn.PatrolPath.Count; i++)
@@ -190,8 +193,20 @@ namespace Game.Editor.LevelEditor
                 var waypoint = spawn.PatrolPath[i];
                 Vector3 waypointPos = _levelData.GridToWorld(waypoint.GridPosition);
 
-                // Draw dotted line to waypoint
-                DrawDottedLine(previousPos, waypointPos);
+                // Check if path segment goes through a wall
+                bool isBlocked = validateWalls && IsPathBlocked(previousGridPos, waypoint.GridPosition);
+
+                // Draw line to waypoint
+                Handles.color = isBlocked ? PatrolPathBlockedColor : PatrolPathColor;
+                if (isBlocked)
+                {
+                    // Draw solid thick line for blocked paths
+                    Handles.DrawAAPolyLine(4f, previousPos, waypointPos);
+                }
+                else
+                {
+                    DrawDottedLine(previousPos, waypointPos);
+                }
 
                 // Draw waypoint marker
                 Handles.color = WaypointColor;
@@ -213,12 +228,68 @@ namespace Game.Editor.LevelEditor
                     Handles.Label(waypointPos + Vector3.up * 0.6f + Vector3.right * 0.2f, paramLabel);
                 }
 
+                previousGridPos = waypoint.GridPosition;
                 previousPos = waypointPos;
-                Handles.color = PatrolPathColor;
             }
 
-            // Draw line back to spawn (loop)
-            DrawDottedLine(previousPos, spawnWorldPos);
+            // Draw line back to spawn
+            bool returnBlocked = validateWalls && IsPathBlocked(previousGridPos, spawn.SpawnPosition);
+            Handles.color = returnBlocked ? PatrolPathBlockedColor : PatrolPathColor;
+            if (returnBlocked)
+            {
+                Handles.DrawAAPolyLine(4f, previousPos, spawnWorldPos);
+            }
+            else
+            {
+                DrawDottedLine(previousPos, spawnWorldPos);
+            }
+        }
+
+        private bool IsPathBlocked(Vector2Int from, Vector2Int to)
+        {
+            // Use Bresenham's line algorithm to check all cells between two points
+            int x0 = from.x;
+            int y0 = from.y;
+            int x1 = to.x;
+            int y1 = to.y;
+
+            int dx = Mathf.Abs(x1 - x0);
+            int dy = Mathf.Abs(y1 - y0);
+            int sx = x0 < x1 ? 1 : -1;
+            int sy = y0 < y1 ? 1 : -1;
+            int err = dx - dy;
+
+            while (true)
+            {
+                // Skip start and end positions
+                if ((x0 != from.x || y0 != from.y) && (x0 != to.x || y0 != to.y))
+                {
+                    if (_levelData.HasWallAt(new Vector2Int(x0, y0)))
+                    {
+                        return true;
+                    }
+                }
+
+                if (x0 == x1 && y0 == y1)
+                {
+                    break;
+                }
+
+                int e2 = 2 * err;
+                if (e2 > -dy)
+                {
+                    err -= dy;
+                    x0 += sx;
+                }
+
+                if (e2 < dx)
+                {
+                    err += dx;
+                    y0 += sy;
+                }
+            }
+
+            return false;
         }
 
         private void DrawDottedLine(Vector3 start, Vector3 end)

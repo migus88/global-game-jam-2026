@@ -2415,6 +2415,7 @@ GameObject:
   - component: {fileID: 3672395607190269778}
   - component: {fileID: 6349172955468430399}
   - component: {fileID: 7027705425608581828}
+  - component: {fileID: 4653344120669106017}
   m_Layer: 7
   m_Name: Player
   m_TagString: Player
@@ -2665,6 +2666,19 @@ MonoBehaviour:
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
+--- !u!114 &4653344120669106017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9083156454595778573}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8d5603ed40934021998e93d2b637af1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Player.PlayerCameraTarget
+  <CameraTarget>k__BackingField: {fileID: 1458300653608670966}
 --- !u!1 &9112442098058185786
 GameObject:
   m_ObjectHideFlags: 0

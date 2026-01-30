@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using Game.Camera;
 using Game.LevelEditor.Data;
+using Game.Player;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -172,12 +174,8 @@ namespace Game.LevelEditor.Runtime
                 patrolController = enemy.AddComponent<EnemyPatrolController>();
             }
 
-            patrolController.Initialize(enemyData.PatrolPath, levelData);
-
-            if (enemyData.PatrolPath.Count > 0)
-            {
-                patrolController.StartPatrol();
-            }
+            patrolController.Initialize(enemyData.PatrolPath, levelData, worldPos);
+            patrolController.StartPatrol();
 
             _enemyInstances.Add(enemy);
         }
@@ -216,6 +214,34 @@ namespace Game.LevelEditor.Runtime
             Vector3 worldPos = levelData.GridToWorld(levelData.PlayerSpawnPosition);
             _playerInstance = _resolver.Instantiate(prefab, worldPos, Quaternion.identity, _levelRoot);
             _playerInstance.name = "Player";
+
+            // Connect camera to player
+            ConnectCameraToPlayer();
+        }
+
+        private void ConnectCameraToPlayer()
+        {
+            if (_playerInstance == null)
+            {
+                return;
+            }
+
+            var playerCameraTarget = _playerInstance.GetComponent<PlayerCameraTarget>();
+            if (playerCameraTarget == null)
+            {
+                Debug.LogWarning("Player does not have PlayerCameraTarget component");
+                return;
+            }
+
+            var cameraConnector = Object.FindFirstObjectByType<CameraTargetConnector>();
+            if (cameraConnector != null)
+            {
+                cameraConnector.SetTarget(playerCameraTarget.CameraTarget);
+            }
+            else
+            {
+                Debug.LogWarning("No CameraTargetConnector found in scene");
+            }
         }
     }
 }
