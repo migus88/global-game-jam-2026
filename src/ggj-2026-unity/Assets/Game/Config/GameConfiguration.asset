@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c28a84e277daf44bfa34cffb4c3ee97e, type: 3}
+  m_Name: GameConfiguration
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Configuration.GameConfiguration
+  <VisionCone>k__BackingField:
+    <ViewDistance>k__BackingField: 10
+    <ViewAngle>k__BackingField: 60
+    <ObstacleLayer>k__BackingField:
+      serializedVersion: 2
+      m_Bits: 64
+    <TargetLayer>k__BackingField:
+      serializedVersion: 2
+      m_Bits: 128
+    <TimeToDetect>k__BackingField: 2
+    <TimeToLoseDetection>k__BackingField: 1.5
+    <IdleColor>k__BackingField: {r: 0, g: 1, b: 0, a: 0.3}
+    <DetectingColor>k__BackingField: {r: 1, g: 1, b: 0, a: 0.5}
+    <AlertColor>k__BackingField: {r: 1, g: 0, b: 0, a: 0.6}
+    <ConeHeightOffset>k__BackingField: 0.05
+    <ConeSegments>k__BackingField: 24
