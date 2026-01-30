@@ -1,12 +1,15 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Game.GameState;
+using Migs.MLock.Interfaces;
 using TMPro;
 using UnityEngine;
 using VContainer;
+using VContainer.Unity;
 
 namespace Game.Sound
 {
-    public class AmbientPhraseTrigger : MonoBehaviour
+    public class AmbientPhraseTrigger : MonoBehaviour, ILockable<GameLockTags>
     {
         [SerializeField, Header("Detection")]
         private float _detectionRadius = 5f;
@@ -30,6 +33,7 @@ namespace Game.Sound
         private float _textDisplayDuration = 3f;
 
         private SoundManager _soundManager;
+        private GameLockService _lockService;
         private UnityEngine.Camera _mainCamera;
         private GameObject _currentTextDisplay;
         private TextMeshPro _currentTextMesh;
@@ -37,23 +41,60 @@ namespace Game.Sound
 
         private bool _isPlaying;
         private bool _isOnCooldown;
+        private bool _isLocked;
         private readonly Collider[] _detectionResults = new Collider[1];
 
+        public GameLockTags LockTags => GameLockTags.EnemyAI;
+
         [Inject]
-        public void Construct(SoundManager soundManager)
+        public void Construct(SoundManager soundManager, GameLockService lockService)
         {
             _soundManager = soundManager;
+            _lockService = lockService;
         }
 
         private void Start()
         {
+            ResolveDependenciesIfNeeded();
+
             _mainCamera = UnityEngine.Camera.main;
             _cancellationTokenSource = new CancellationTokenSource();
+
+            _lockService?.Subscribe(this);
 
             if (_textDisplayPrefab == null)
             {
                 CreateDefaultTextDisplay();
             }
+        }
+
+        private void ResolveDependenciesIfNeeded()
+        {
+            if (_soundManager != null && _lockService != null)
+            {
+                return;
+            }
+
+            var lifetimeScope = FindAnyObjectByType<LifetimeScope>();
+
+            if (lifetimeScope == null)
+            {
+                return;
+            }
+
+            _soundManager ??= lifetimeScope.Container.Resolve<SoundManager>();
+            _lockService ??= lifetimeScope.Container.Resolve<GameLockService>();
+        }
+
+        public void HandleLocking()
+        {
+            _isLocked = true;
+            HideText();
+        }
+
+        public void HandleUnlocking()
+        {
+            _isLocked = false;
         }
 
         private void CreateDefaultTextDisplay()
@@ -74,7 +115,7 @@ namespace Game.Sound
 
         private void Update()
         {
-            if (_isPlaying || _isOnCooldown || _soundManager == null)
+            if (_isLocked || _isPlaying || _isOnCooldown || _soundManager == null)
             {
                 return;
             }
@@ -210,6 +251,8 @@ namespace Game.Sound
 
         private void OnDestroy()
         {
+            _lockService?.Unsubscribe(this);
+
             _cancellationTokenSource?.Cancel();
             _cancellationTokenSource?.Dispose();
 

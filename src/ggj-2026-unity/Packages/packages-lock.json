@@ -21,6 +21,13 @@
       "dependencies": {},
       "url": "https://package.openupm.com"
     },
+    "com.migsweb.mlock": {
+      "version": "1.2.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://package.openupm.com"
+    },
     "com.unity.addressables": {
       "version": "2.3.1",
       "depth": 0,

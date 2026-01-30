@@ -1,10 +1,16 @@
 using System;
 using CleverCrow.Fluid.BTs.Tasks;
 using CleverCrow.Fluid.BTs.Trees;
+using Game.Conversation.Events;
 using Game.Detection;
+using Game.Events;
+using Game.GameState;
 using Game.LevelEditor.Runtime;
+using Migs.MLock.Interfaces;
 using UnityEngine;
 using UnityEngine.AI;
+using VContainer;
+using VContainer.Unity;
 
 namespace Game.AI
 {
@@ -18,7 +24,7 @@ namespace Game.AI
 
     [RequireComponent(typeof(EnemyPatrolController))]
     [RequireComponent(typeof(NavMeshAgent))]
-    public class EnemyBehavior : MonoBehaviour
+    public class EnemyBehavior : MonoBehaviour, ILockable<GameLockTags>
     {
         private static readonly int IsWalkingHash = Animator.StringToHash("IsWalking");
 
@@ -42,6 +48,8 @@ namespace Game.AI
         private NavMeshAgent _navAgent;
         private Animator _animator;
         private BehaviorTree _behaviorTree;
+        private EventAggregator _eventAggregator;
+        private GameLockService _lockService;
 
         private EnemyState _currentState = EnemyState.Patrol;
         private Vector3 _lastKnownPosition;
@@ -51,10 +59,22 @@ namespace Game.AI
         private Quaternion _searchStartRotation;
         private bool _isRotatingBeforeFollow;
         private Quaternion _followTargetRotation;
+        private bool _isLocked;
+        private bool _isIgnoringPlayer;
 
         public EnemyState CurrentState => _currentState;
-        public bool IsPlayerVisible => _visionCone != null && _visionCone.CurrentTarget != null;
+        public bool IsPlayerVisible => _visionCone != null && _visionCone.CurrentTarget != null && !_isIgnoringPlayer;
         public float DetectionProgress => _visionCone?.DetectionProgress ?? 0f;
+        public bool IsIgnoringPlayer => _isIgnoringPlayer;
+
+        public GameLockTags LockTags => GameLockTags.EnemyAI;
+
+        [Inject]
+        public void Construct(EventAggregator eventAggregator, GameLockService lockService)
+        {
+            _eventAggregator = eventAggregator;
+            _lockService = lockService;
+        }
 
         private void Awake()
         {
@@ -71,17 +91,40 @@ namespace Game.AI
 
         private void Start()
         {
+            ResolveDependenciesIfNeeded();
+
             if (_visionCone != null)
             {
                 _visionCone.Detected += OnPlayerDetected;
                 _visionCone.LostTarget += OnPlayerLost;
             }
 
+            _lockService?.Subscribe(this);
+            _eventAggregator?.Subscribe<ConversationEndedEvent>(OnConversationEnded);
+
             BuildBehaviorTree();
 
             // Start in patrol state
             SetState(EnemyState.Patrol);
             _patrolController.StartPatrol();
+        }
+
+        private void ResolveDependenciesIfNeeded()
+        {
+            if (_eventAggregator != null && _lockService != null)
+            {
+                return;
+            }
+
+            var lifetimeScope = FindAnyObjectByType<LifetimeScope>();
+
+            if (lifetimeScope == null)
+            {
+                return;
+            }
+
+            _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
+            _lockService ??= lifetimeScope.Container.Resolve<GameLockService>();
         }
 
         private void OnDestroy()
@@ -91,10 +134,71 @@ namespace Game.AI
                 _visionCone.Detected -= OnPlayerDetected;
                 _visionCone.LostTarget -= OnPlayerLost;
             }
+
+            _lockService?.Unsubscribe(this);
+            _eventAggregator?.Unsubscribe<ConversationEndedEvent>(OnConversationEnded);
+        }
+
+        public void HandleLocking()
+        {
+            _isLocked = true;
+
+            if (_navAgent != null && _navAgent.isOnNavMesh)
+            {
+                _navAgent.isStopped = true;
+            }
+
+            SetWalking(false);
+        }
+
+        public void HandleUnlocking()
+        {
+            _isLocked = false;
+
+            // Reset from alert state after conversation
+            if (_currentState == EnemyState.Alert && !_isIgnoringPlayer)
+            {
+                SetState(EnemyState.Patrol);
+                _patrolController?.StartPatrol();
+            }
+
+            if (_navAgent != null && _navAgent.isOnNavMesh)
+            {
+                _navAgent.isStopped = false;
+            }
+        }
+
+        private void OnConversationEnded(ConversationEndedEvent evt)
+        {
+            // Check if this enemy was the one who caught the player
+            if (evt.Enemy != transform && evt.Enemy != transform.root)
+            {
+                return;
+            }
+
+            if (evt.WasCorrect)
+            {
+                StartIgnoringPlayer();
+            }
+        }
+
+        private void StartIgnoringPlayer()
+        {
+            _isIgnoringPlayer = true;
+
+            if (_visionCone != null)
+            {
+                _visionCone.gameObject.SetActive(false);
+            }
         }
 
         private void Update()
         {
+            if (_isLocked)
+            {
+                return;
+            }
+
             _behaviorTree?.Tick();
         }
 
@@ -111,7 +215,7 @@ namespace Game.AI
                 .Selector()
                     // Alert branch - game over
                     .Sequence()
-                        .Condition("IsFullyDetected", () => _visionCone != null && _visionCone.IsDetected)
+                        .Condition("IsFullyDetected", () => _visionCone != null && _visionCone.IsDetected && !_isIgnoringPlayer)
                         .Do("Alert", DoAlert)
                     .End()
                     // Detecting branch - go to player's position (continues even if player not visible)
@@ -164,11 +268,10 @@ namespace Game.AI
                 _patrolController.StopPatrol();
                 _navAgent.isStopped = true;
                 SetWalking(false);
-                Debug.Log($"[EnemyBehavior] Player fully detected! Game Over!");
                 PlayerFullyDetected?.Invoke();
             }
 
-            // Stay in alert forever
+            // Stay in alert until conversation system handles it
             return TaskStatus.Continue;
         }
 

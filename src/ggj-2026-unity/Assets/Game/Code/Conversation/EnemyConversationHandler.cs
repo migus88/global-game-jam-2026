@@ -74,23 +74,31 @@ namespace Game.Conversation
 
         private void OnConversationStarted(ConversationStartedEvent evt)
         {
-            if (evt.Enemy != transform)
+            if (!IsThisEnemy(evt.Enemy))
             {
                 return;
             }
+
+            Debug.Log($"[EnemyConversationHandler] Conversation started, setting camera priority to {_conversationCameraPriority}");
 
             if (_conversationCamera != null)
             {
                 _conversationCamera.Priority = _conversationCameraPriority;
             }
+            else
+            {
+                Debug.LogWarning("[EnemyConversationHandler] Conversation camera is not assigned!");
+            }
         }
 
         private void OnConversationEnded(ConversationEndedEvent evt)
         {
-            if (evt.Enemy != transform)
+            if (!IsThisEnemy(evt.Enemy))
             {
                 return;
             }
+
+            Debug.Log($"[EnemyConversationHandler] Conversation ended, restoring camera priority to {_originalCameraPriority}");
 
             if (_conversationCamera != null)
             {
@@ -101,6 +109,11 @@ namespace Game.Conversation
             {
                 StartIgnoringPlayer();
             }
+        }
+
+        private bool IsThisEnemy(Transform enemy)
+        {
+            return enemy == transform || enemy == transform.root;
         }
 
         private void StartIgnoringPlayer()

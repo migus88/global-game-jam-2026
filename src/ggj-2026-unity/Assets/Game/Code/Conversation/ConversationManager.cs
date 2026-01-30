@@ -3,8 +3,10 @@ using Cysharp.Threading.Tasks;
 using Game.Conversation.Data;
 using Game.Conversation.Events;
 using Game.Events;
+using Game.GameState;
 using Game.GameState.Events;
 using Game.Sound;
+using Migs.MLock.Interfaces;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -19,9 +21,11 @@ namespace Game.Conversation
         private EventAggregator _eventAggregator;
         private ConversationConfiguration _configuration;
         private SoundManager _soundManager;
+        private GameLockService _lockService;
 
         private Transform _currentEnemy;
         private ConversationQuestion _currentQuestion;
+        private ILock<GameLockTags> _currentLock;
         private bool _isInConversation;
 
         public bool IsInConversation => _isInConversation;
@@ -30,11 +34,13 @@ namespace Game.Conversation
         public void Construct(
             EventAggregator eventAggregator,
             ConversationConfiguration configuration,
-            SoundManager soundManager)
+            SoundManager soundManager,
+            GameLockService lockService)
         {
             _eventAggregator = eventAggregator;
             _configuration = configuration;
             _soundManager = soundManager;
+            _lockService = lockService;
         }
 
         private void Start()
@@ -51,7 +57,7 @@ namespace Game.Conversation
 
         private void ResolveDependenciesIfNeeded()
         {
-            if (_eventAggregator != null && _configuration != null && _soundManager != null)
+            if (_eventAggregator != null && _configuration != null && _soundManager != null && _lockService != null)
             {
                 return;
             }
@@ -66,11 +72,13 @@ namespace Game.Conversation
             _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
             _configuration ??= lifetimeScope.Container.Resolve<ConversationConfiguration>();
             _soundManager ??= lifetimeScope.Container.Resolve<SoundManager>();
+            _lockService ??= lifetimeScope.Container.Resolve<GameLockService>();
         }
 
         private void OnDestroy()
         {
             _eventAggregator?.Unsubscribe<PlayerCaughtEvent>(OnPlayerCaught);
+            _currentLock?.Dispose();
 
             if (_conversationUI != null)
             {
@@ -93,7 +101,12 @@ namespace Game.Conversation
             _isInConversation = true;
             _currentEnemy = enemy;
 
-            _eventAggregator?.Publish(new GamePausedEvent(PauseReason.Conversation));
+            Debug.Log("[ConversationManager] Starting conversation");
+
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+
+            _currentLock = _lockService?.Lock(GameLockTags.All);
             _eventAggregator?.Publish(new ConversationStartedEvent(enemy));
 
             await UniTask.Delay(TimeSpan.FromSeconds(_configuration.DelayBeforeQuestion));
@@ -102,13 +115,21 @@ namespace Game.Conversation
 
             if (_currentQuestion == null)
             {
+                Debug.LogWarning("[ConversationManager] No question found in configuration!");
                 EndConversation(true).Forget();
                 return;
             }
 
+            Debug.Log($"[ConversationManager] Showing question: {_currentQuestion.Text}");
+
             if (_currentQuestion.AudioClip != null)
             {
                 _soundManager?.PlayClip2D(_currentQuestion.AudioClip);
+            }
+
+            if (_conversationUI == null)
+            {
+                Debug.LogError("[ConversationManager] ConversationUI is not assigned!");
             }
 
             _conversationUI?.ShowQuestion(_currentQuestion);
@@ -165,11 +186,16 @@ namespace Game.Conversation
 
             if (wasCorrect)
             {
-                _eventAggregator?.Publish(new GameResumedEvent());
+                Cursor.visible = false;
+                Cursor.lockState = CursorLockMode.Locked;
+
+                _currentLock?.Dispose();
+                _currentLock = null;
             }
             else
             {
                 _eventAggregator?.Publish(new GameOverEvent("You were caught!"));
+                // Keep lock active on game over
             }
 
             _isInConversation = false;

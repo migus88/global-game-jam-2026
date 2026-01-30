@@ -28,6 +28,7 @@ namespace Game.Conversation
         private void Awake()
         {
             SetupButtons();
+            Hide();
         }
 
         private void SetupButtons()

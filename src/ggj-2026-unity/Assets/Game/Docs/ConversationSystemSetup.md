@@ -122,14 +122,23 @@ GameOverCanvas
 
 ## Player Setup
 
-### 8. Player Input Handler
+### 8. Lockable Player Input
 
-**Add Component:** `PausableInputHandler` to the Player GameObject
+**Add Component:** `LockablePlayerInput` to the Player GameObject
 
 **Assign:** 
 - **Player Input** - Reference to PlayerInput component (auto-finds if not set)
 
-This automatically disables player input when game is paused and re-enables on resume.
+This automatically disables player input when locked (during conversation) and re-enables when unlocked.
+
+### 9. Lockable Player Movement
+
+**Add Component:** `LockablePlayerMovement` to the Player GameObject
+
+**Assign:**
+- **Movement Controller** - Reference to the movement MonoBehaviour (e.g., ThirdPersonController)
+
+This disables player movement when locked (during hiding or conversation).
 
 ---
 
@@ -162,51 +171,69 @@ This automatically disables player input when game is paused and re-enables on r
 
 ---
 
-## Making Other Systems Pause-Aware
+## Making Other Systems Lockable
 
-To make any system respond to pause/resume:
+The system uses [MLock](https://github.com/migus88/MLock) for locking functionality during conversations. Systems implement `ILockable<GameLockTags>` to respond to locks.
 
+**Available Lock Tags** (`GameLockTags`):
+- `PlayerInput` - Player input handling
+- `EnemyAI` - Enemy behavior/AI
+- `PlayerMovement` - Player movement
+- `All` - All of the above
+
+**Implement ILockable:**
 ```csharp
-using Game.Events;
-using Game.GameState.Events;
+using Game.GameState;
+using Migs.MLock;
 
-public class MyPausableSystem : MonoBehaviour
+public class MyLockableSystem : MonoBehaviour, ILockable<GameLockTags>
 {
-    private EventAggregator _eventAggregator;
-    private bool _isPaused;
+    private GameLockService _lockService;
+    private bool _isLocked;
+
+    public GameLockTags LockTags => GameLockTags.PlayerInput; // Which tags affect this
 
     private void Start()
     {
-        // Resolve _eventAggregator from LifetimeScope...
-        
-        _eventAggregator?.Subscribe<GamePausedEvent>(OnPaused);
-        _eventAggregator?.Subscribe<GameResumedEvent>(OnResumed);
-    }
-
-    private void OnPaused(GamePausedEvent evt)
-    {
-        _isPaused = true;
-        // Disable your system's update logic
-    }
-
-    private void OnResumed(GameResumedEvent evt)
-    {
-        _isPaused = false;
-        // Re-enable your system's update logic
-    }
-
-    private void Update()
-    {
-        if (_isPaused) return;
-        // Your normal update logic
+        // Resolve _lockService from LifetimeScope...
+        _lockService?.Subscribe(this);
     }
 
     private void OnDestroy()
     {
-        _eventAggregator?.Unsubscribe<GamePausedEvent>(OnPaused);
-        _eventAggregator?.Unsubscribe<GameResumedEvent>(OnResumed);
+        _lockService?.Unsubscribe(this);
+    }
+
+    public void HandleLocking()
+    {
+        _isLocked = true;
+        // Disable your system
+    }
+
+    public void HandleUnlocking()
+    {
+        _isLocked = false;
+        // Re-enable your system
+    }
+
+    private void Update()
+    {
+        if (_isLocked) return;
+        // Your normal update logic
     }
 }
+```
+
+**Locking from code:**
+```csharp
+// Lock specific tags
+ILock<GameLockTags> myLock = _lockService.Lock(GameLockTags.PlayerInput);
+
+// Lock everything
+ILock<GameLockTags> myLock = _lockService.Lock(GameLockTags.All);
+
+// Unlock by disposing
+myLock.Dispose();
 ```
 
 ---
@@ -221,4 +248,5 @@ public class MyPausableSystem : MonoBehaviour
 - [ ] Create `GameOverUI` canvas and assign references
 - [ ] Add `EnemyConversationHandler` to each enemy
 - [ ] Create CinemachineCamera for each enemy's face
-- [ ] Add `PausableInputHandler` to player
+- [ ] Add `LockablePlayerInput` to player
+- [ ] Add `LockablePlayerMovement` to player (assign ThirdPersonController)

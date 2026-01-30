@@ -8,6 +8,8 @@ namespace Game.GameState
 {
     public class GameStateManager : MonoBehaviour
     {
+        public static GameStateManager Instance { get; private set; }
+
         private EventAggregator _eventAggregator;
 
         private bool _isPaused;
@@ -20,6 +22,11 @@ namespace Game.GameState
         public void Construct(EventAggregator eventAggregator)
         {
             _eventAggregator = eventAggregator;
+        }
+
+        private void Awake()
+        {
+            Instance = this;
         }
 
         private void Start()
@@ -50,6 +57,11 @@ namespace Game.GameState
 
         private void OnDestroy()
         {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+
             _eventAggregator?.Unsubscribe<GamePausedEvent>(OnGamePaused);
             _eventAggregator?.Unsubscribe<GameResumedEvent>(OnGameResumed);
             _eventAggregator?.Unsubscribe<GameOverEvent>(OnGameOver);
@@ -59,24 +71,18 @@ namespace Game.GameState
         {
             _isPaused = true;
             _currentPauseReason = evt.Reason;
-
-            Time.timeScale = 0f;
         }
 
         private void OnGameResumed(GameResumedEvent evt)
         {
             _isPaused = false;
             _currentPauseReason = PauseReason.None;
-
-            Time.timeScale = 1f;
         }
 
         private void OnGameOver(GameOverEvent evt)
         {
             _isPaused = true;
             _currentPauseReason = PauseReason.GameOver;
-
-            Time.timeScale = 0f;
         }
     }
 }

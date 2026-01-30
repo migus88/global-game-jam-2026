@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.Events;
+using Game.GameState;
 using Game.Hiding.Events;
 using Game.Infrastructure;
 using Game.Sound;
+using Migs.MLock.Interfaces;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -18,6 +20,7 @@ namespace Game.Hiding
         private EventAggregator _eventAggregator;
         private HideConfiguration _configuration;
         private SoundManager _soundManager;
+        private GameLockService _lockService;
         private ObjectPool<Transform> _effectPool;
 
         private bool _isHidden;
@@ -27,16 +30,18 @@ namespace Game.Hiding
         private bool _hasPlayedHiddenDurationSound;
         private Transform _currentHidingSpot;
         private int _originalLayer;
+        private ILock<GameLockTags> _movementLock;
         private readonly List<GameObject> _hiddenChildren = new();
 
         public bool IsHidden => _isHidden;
 
         [Inject]
-        public void Construct(EventAggregator eventAggregator, HideConfiguration configuration, SoundManager soundManager)
+        public void Construct(EventAggregator eventAggregator, HideConfiguration configuration, SoundManager soundManager, GameLockService lockService)
         {
             _eventAggregator = eventAggregator;
             _configuration = configuration;
             _soundManager = soundManager;
+            _lockService = lockService;
         }
 
         private void Start()
@@ -48,7 +53,7 @@ namespace Game.Hiding
 
         private void ResolveDependenciesIfNeeded()
         {
-            if (_eventAggregator != null && _configuration != null && _soundManager != null)
+            if (_eventAggregator != null && _configuration != null && _soundManager != null && _lockService != null)
             {
                 return;
             }
@@ -63,6 +68,7 @@ namespace Game.Hiding
             _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
             _configuration ??= lifetimeScope.Container.Resolve<HideConfiguration>();
             _soundManager ??= lifetimeScope.Container.Resolve<SoundManager>();
+            _lockService ??= lifetimeScope.Container.Resolve<GameLockService>();
         }
 
         private void InitializeEffectPool()
@@ -177,6 +183,8 @@ namespace Game.Hiding
             _hiddenDurationTimer = 0f;
             _hasPlayedHiddenDurationSound = false;
 
+            _movementLock = _lockService?.Lock(GameLockTags.PlayerMovement);
+
             PlayEnterSound(enterSoundName, hidePosition);
 
             _originalLayer = gameObject.layer;
@@ -210,6 +218,9 @@ namespace Game.Hiding
 
             _isHidden = false;
             _currentHidingSpot = null;
+
+            _movementLock?.Dispose();
+            _movementLock = null;
 
             SetLayerRecursively(gameObject, _originalLayer);
             ShowPlayerChildren();

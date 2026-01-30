@@ -1,6 +1,7 @@
 using Game.Configuration;
 using Game.Conversation.Data;
 using Game.Events;
+using Game.GameState;
 using Game.Hiding;
 using Game.LevelEditor.Data;
 using Game.Sound;
@@ -20,6 +21,7 @@ public class GameLifetimeScope : LifetimeScope
     {
         builder.RegisterInstance(_gameConfiguration);
         builder.Register<EventAggregator>(Lifetime.Singleton);
+        builder.Register<GameLockService>(Lifetime.Singleton);
 
         if (_levelConfiguration != null)
         {

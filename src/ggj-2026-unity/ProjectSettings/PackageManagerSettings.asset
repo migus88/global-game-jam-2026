@@ -36,6 +36,7 @@ MonoBehaviour:
     m_Scopes:
     - com.cysharp.unitask
     - com.github-glitchenzo.nugetforunity
+    - com.migsweb
     - jp.hadashikick.vcontainer
     m_IsDefault: 0
     m_Capabilities: 0
@@ -54,7 +55,7 @@ MonoBehaviour:
     m_Compliance:
       m_Status: 0
       m_Violations: []
-  m_UserSelectedRegistryName: NPM
+  m_UserSelectedRegistryName: package.openupm.com
   m_UserAddingNewScopedRegistry: 0
   m_RegistryInfoDraft:
     m_Modified: 0

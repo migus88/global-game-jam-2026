@@ -6,6 +6,7 @@
       "scopes": [
         "com.cysharp.unitask",
         "com.github-glitchenzo.nugetforunity",
+        "com.migsweb",
         "jp.hadashikick.vcontainer"
       ]
     },
@@ -19,6 +20,7 @@
   ],
   "dependencies": {
     "com.fluid.behavior-tree": "2.2.0",
+    "com.migsweb.mlock": "1.2.0",
     "com.cysharp.unitask": "2.5.10",
     "com.github-glitchenzo.nugetforunity": "4.2.0",
     "com.unity.addressables": "2.3.1",
