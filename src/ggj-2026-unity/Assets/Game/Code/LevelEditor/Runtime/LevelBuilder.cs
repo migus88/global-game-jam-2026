@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.AI;
 using Game.Camera;
-using Game.Detection;
 using Game.LevelEditor.Data;
 using Game.Player;
 using UnityEngine;

@@ -1,9 +1,10 @@
 using System;
-using Game.AI.BehaviorTree;
-using Game.AI.BehaviorTree.Nodes;
+using CleverCrow.Fluid.BTs.Tasks;
+using CleverCrow.Fluid.BTs.Trees;
 using Game.Detection;
 using Game.LevelEditor.Runtime;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Game.AI
 {
@@ -16,6 +17,7 @@ namespace Game.AI
     }
 
     [RequireComponent(typeof(EnemyPatrolController))]
+    [RequireComponent(typeof(NavMeshAgent))]
     public class EnemyBehavior : MonoBehaviour
     {
         private static readonly int IsWalkingHash = Animator.StringToHash("IsWalking");
@@ -28,7 +30,6 @@ namespace Game.AI
 
         [Header("Movement")]
         [SerializeField] private float _followSpeed = 2f;
-        [SerializeField] private float _followRotationSpeed = 120f;
 
         [Header("Search")]
         [SerializeField] private float _searchDuration = 3f;
@@ -36,20 +37,16 @@ namespace Game.AI
         [SerializeField] private float _searchScanSpeed = 90f;
 
         private EnemyPatrolController _patrolController;
-        private CharacterController _characterController;
+        private NavMeshAgent _navAgent;
         private Animator _animator;
-        private IBehaviorNode _behaviorTree;
+        private BehaviorTree _behaviorTree;
 
         private EnemyState _currentState = EnemyState.Patrol;
-        private Transform _lastKnownTarget;
         private Vector3 _lastKnownPosition;
         private float _searchTimer;
         private bool _wasDetecting;
         private bool _isSearchScanning;
-        private float _searchScanProgress;
         private Quaternion _searchStartRotation;
-        private float _gravity = -9.81f;
-        private float _verticalVelocity;
 
         public EnemyState CurrentState => _currentState;
         public bool IsPlayerVisible => _visionCone != null && _visionCone.CurrentTarget != null;
@@ -58,7 +55,7 @@ namespace Game.AI
         private void Awake()
         {
             _patrolController = GetComponent<EnemyPatrolController>();
-            _characterController = GetComponent<CharacterController>();
+            _navAgent = GetComponent<NavMeshAgent>();
             _animator = GetComponentInChildren<Animator>();
 
             // Auto-find VisionCone if not assigned
@@ -101,89 +98,88 @@ namespace Game.AI
         {
             // Behavior tree structure:
             // Root (Selector)
-            // ├── Alert branch (Sequence): IsFullyDetected? -> Alert
-            // ├── Detecting branch (Sequence): IsPlayerVisible? -> StopPatrol -> FollowPlayer
-            // ├── Searching branch (Sequence): WasDetecting? -> Search -> ResumePatrol
+            // ├── Alert branch: IsFullyDetected? -> Alert
+            // ├── Detecting branch: IsPlayerVisible? -> FollowPlayer
+            // ├── Searching branch: IsSearching? -> Search
             // └── Patrol branch: Patrol
 
-            _behaviorTree = new SelectorNode(
-                // Alert branch - game over
-                new SequenceNode(
-                    new ConditionNode(IsFullyDetected),
-                    new ActionNode(DoAlert)
-                ),
-                // Detecting branch - follow player
-                new SequenceNode(
-                    new ConditionNode(() => IsPlayerVisible),
-                    new ActionNode(DoDetecting)
-                ),
-                // Searching branch - look around after losing player
-                new SequenceNode(
-                    new ConditionNode(() => _currentState == EnemyState.Searching),
-                    new ActionNode(DoSearching)
-                ),
-                // Patrol branch - default behavior
-                new ActionNode(DoPatrol)
-            );
+            _behaviorTree = new BehaviorTreeBuilder(gameObject)
+                .Selector()
+                    // Alert branch - game over
+                    .Sequence()
+                        .Condition("IsFullyDetected", () => _visionCone != null && _visionCone.IsDetected)
+                        .Do("Alert", DoAlert)
+                    .End()
+                    // Detecting branch - follow player
+                    .Sequence()
+                        .Condition("IsPlayerVisible", () => IsPlayerVisible)
+                        .Do("FollowPlayer", DoDetecting)
+                    .End()
+                    // Searching branch - look around after losing player
+                    .Sequence()
+                        .Condition("IsSearching", () => _currentState == EnemyState.Searching)
+                        .Do("Search", DoSearching)
+                    .End()
+                    // Patrol branch - default behavior
+                    .Do("Patrol", DoPatrol)
+                .End()
+                .Build();
         }
 
-        private bool IsFullyDetected()
-        {
-            return _visionCone != null && _visionCone.IsDetected;
-        }
-
-        private BehaviorStatus DoAlert()
+        private TaskStatus DoAlert()
         {
             if (_currentState != EnemyState.Alert)
             {
                 SetState(EnemyState.Alert);
                 _patrolController.StopPatrol();
+                _navAgent.isStopped = true;
                 SetWalking(false);
                 Debug.Log($"[EnemyBehavior] Player fully detected! Game Over!");
                 PlayerFullyDetected?.Invoke();
             }
 
             // Stay in alert forever
-            return BehaviorStatus.Running;
+            return TaskStatus.Continue;
         }
 
-        private BehaviorStatus DoDetecting()
+        private TaskStatus DoDetecting()
         {
             if (_currentState != EnemyState.Detecting)
             {
                 SetState(EnemyState.Detecting);
                 _patrolController.StopPatrol();
                 _wasDetecting = true;
+                _navAgent.speed = _followSpeed;
             }
 
             // Track last known position
             if (_visionCone.CurrentTarget != null)
             {
-                _lastKnownTarget = _visionCone.CurrentTarget;
-                _lastKnownPosition = _lastKnownTarget.position;
+                _lastKnownPosition = _visionCone.CurrentTarget.position;
             }
 
-            // Slowly walk towards player
-            MoveTowardsTarget(_lastKnownPosition);
+            // Move towards player using NavMesh
+            _navAgent.isStopped = false;
+            _navAgent.SetDestination(_lastKnownPosition);
+            SetWalking(_navAgent.velocity.sqrMagnitude > 0.01f);
 
-            return BehaviorStatus.Success;
+            return TaskStatus.Success;
         }
 
-        private BehaviorStatus DoSearching()
+        private TaskStatus DoSearching()
         {
             // Initialize search state
             if (!_isSearchScanning)
             {
                 _isSearchScanning = true;
-                _searchScanProgress = 0f;
                 _searchStartRotation = transform.rotation;
                 _searchTimer = 0f;
+                _navAgent.isStopped = true;
                 SetWalking(false);
             }
 
             // Perform scanning
             _searchTimer += Time.deltaTime;
-
             PerformSearchScan();
 
             // Check if search duration elapsed
@@ -193,20 +189,20 @@ namespace Game.AI
                 _isSearchScanning = false;
                 _wasDetecting = false;
                 SetState(EnemyState.Patrol);
-                return BehaviorStatus.Success;
+                return TaskStatus.Success;
             }
 
-            return BehaviorStatus.Running;
+            return TaskStatus.Continue;
         }
 
-        private BehaviorStatus DoPatrol()
+        private TaskStatus DoPatrol()
         {
             if (_wasDetecting)
             {
                 // Just lost sight of player, enter search mode
                 _wasDetecting = false;
                 SetState(EnemyState.Searching);
-                return BehaviorStatus.Failure; // Let search branch handle it
+                return TaskStatus.Failure; // Let search branch handle it
             }
 
             if (_currentState != EnemyState.Patrol)
@@ -215,7 +211,7 @@ namespace Game.AI
                 _patrolController.StartPatrol();
             }
 
-            return BehaviorStatus.Success;
+            return TaskStatus.Success;
         }
 
         private void PerformSearchScan()
@@ -243,44 +239,6 @@ namespace Game.AI
                 targetRotation,
                 _searchScanSpeed * Time.deltaTime
             );
-        }
-
-        private void MoveTowardsTarget(Vector3 targetPosition)
-        {
-            Vector3 direction = targetPosition - transform.position;
-            direction.y = 0f;
-
-            if (direction.sqrMagnitude < 0.25f)
-            {
-                // Close enough, just face target
-                SetWalking(false);
-                return;
-            }
-
-            SetWalking(true);
-
-            // Rotate towards target
-            Quaternion targetRotation = Quaternion.LookRotation(direction.normalized);
-            transform.rotation = Quaternion.RotateTowards(
-                transform.rotation,
-                targetRotation,
-                _followRotationSpeed * Time.deltaTime
-            );
-
-            // Apply gravity
-            if (_characterController.isGrounded)
-            {
-                _verticalVelocity = -0.5f;
-            }
-            else
-            {
-                _verticalVelocity += _gravity * Time.deltaTime;
-            }
-
-            // Move using CharacterController
-            Vector3 move = direction.normalized * (_followSpeed * Time.deltaTime);
-            move.y = _verticalVelocity * Time.deltaTime;
-            _characterController.Move(move);
         }
 
         private void SetState(EnemyState newState)

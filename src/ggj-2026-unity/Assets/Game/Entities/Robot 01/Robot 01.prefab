@@ -9,8 +9,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1784658408509232706}
-  - component: {fileID: 322630640034482954}
   - component: {fileID: 6506769245644826815}
+  - component: {fileID: 7839184589496811335}
+  - component: {fileID: 3426935368618551544}
   m_Layer: 0
   m_Name: Robot 01
   m_TagString: Untagged
@@ -35,31 +36,6 @@ Transform:
   - {fileID: 5844386631180544899}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!143 &322630640034482954
-CharacterController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5009071700233146085}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Height: 2
-  m_Radius: 0.3
-  m_SlopeLimit: 45
-  m_StepOffset: 0.3
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 1, z: 0}
 --- !u!114 &6506769245644826815
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -72,14 +48,51 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7870d0d48ebbb4347a6e19dd9512351e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.LevelEditor.Runtime.EnemyPatrolController
-  _moveSpeed: 3
+  _patrolSpeed: 3
   _rotationSpeed: 180
-  _smoothTurnRadius: 0.5
-  _gravity: -9.81
   _overrideObservationSettings: 0
   _scanAngle: 120
   _scanSpeed: 90
   _pauseAtEnds: 0.3
+--- !u!114 &7839184589496811335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5009071700233146085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 105f3bd0d453a43cb81e6a03fabb7fc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.AI.EnemyBehavior
+  _visionCone: {fileID: 3618264122071139747}
+  _followSpeed: 1.3
+  _searchDuration: 3
+  _searchScanAngle: 120
+  _searchScanSpeed: 90
+--- !u!195 &3426935368618551544
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5009071700233146085}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 3.5
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 0
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 2
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
 --- !u!1 &7946807622428990434
 GameObject:
   m_ObjectHideFlags: 0

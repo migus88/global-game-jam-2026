@@ -4,20 +4,19 @@ using Cysharp.Threading.Tasks;
 using Game.Configuration;
 using Game.LevelEditor.Data;
 using UnityEngine;
+using UnityEngine.AI;
 using VContainer;
 
 namespace Game.LevelEditor.Runtime
 {
-    [RequireComponent(typeof(CharacterController))]
+    [RequireComponent(typeof(NavMeshAgent))]
     public class EnemyPatrolController : MonoBehaviour
     {
         private static readonly int IsWalkingHash = Animator.StringToHash("IsWalking");
 
         [Header("Movement")]
-        [SerializeField] private float _moveSpeed = 3f;
+        [SerializeField] private float _patrolSpeed = 3f;
         [SerializeField] private float _rotationSpeed = 180f;
-        [SerializeField] private float _smoothTurnRadius = 0.5f;
-        [SerializeField] private float _gravity = -9.81f;
 
         [Header("Observation Override")]
         [SerializeField] private bool _overrideObservationSettings;
@@ -30,12 +29,11 @@ namespace Game.LevelEditor.Runtime
         private LevelData _levelData;
         private Vector3 _spawnPosition;
         private Animator _animator;
-        private CharacterController _characterController;
+        private NavMeshAgent _navAgent;
         private CancellationTokenSource _patrolCts;
         private int _currentWaypointIndex;
         private bool _isPatrolling;
         private bool _movingForward = true;
-        private float _verticalVelocity;
         private bool _isWalking;
 
         public bool IsPatrolling => _isPatrolling;
@@ -54,7 +52,7 @@ namespace Game.LevelEditor.Runtime
         private void Awake()
         {
             _animator = GetComponentInChildren<Animator>();
-            _characterController = GetComponent<CharacterController>();
+            _navAgent = GetComponent<NavMeshAgent>();
         }
 
         private void OnDestroy()
@@ -67,11 +65,17 @@ namespace Game.LevelEditor.Runtime
             _patrolPath = patrolPath;
             _levelData = levelData;
             _spawnPosition = spawnPosition;
+
+            // Configure NavMeshAgent
+            _navAgent.speed = _patrolSpeed;
+            _navAgent.angularSpeed = _rotationSpeed;
+            _navAgent.updateRotation = true;
         }
 
         public void StartPatrol()
         {
             StopPatrol();
+            _navAgent.isStopped = false;
             _patrolCts = new CancellationTokenSource();
             PatrolLoopAsync(_patrolCts.Token).Forget();
         }
@@ -87,6 +91,11 @@ namespace Game.LevelEditor.Runtime
 
             _isPatrolling = false;
             SetWalking(false);
+
+            if (_navAgent != null && _navAgent.isOnNavMesh)
+            {
+                _navAgent.isStopped = true;
+            }
         }
 
         private void SetWalking(bool walking)
@@ -186,14 +195,9 @@ namespace Game.LevelEditor.Runtime
                 bool hasDelay = waypointData?.WaitDelay > 0f;
                 bool hasAnimatorAction = !string.IsNullOrEmpty(waypointData?.AnimatorParameterName);
                 bool isObservation = waypointData?.IsObservation ?? false;
-                bool shouldStop = hasDelay || hasAnimatorAction || isObservation;
 
-                // Determine next-next position for smooth blending
-                int nextNextIndex = _movingForward ? nextIndex + 1 : nextIndex - 1;
-                nextNextIndex = Mathf.Clamp(nextNextIndex, 0, fullPath.Count - 1);
-                Vector3 nextNextPosition = fullPath[nextNextIndex];
-
-                await MoveToWaypointAsync(targetPosition, nextNextPosition, shouldStop, ct);
+                // Move to waypoint using NavMesh
+                await MoveToWaypointAsync(targetPosition, ct);
 
                 if (ct.IsCancellationRequested)
                 {
@@ -214,6 +218,7 @@ namespace Game.LevelEditor.Runtime
                 // Regular wait at waypoint
                 else if (hasDelay)
                 {
+                    SetWalking(false);
                     await UniTask.Delay(
                         (int)(waypointData.WaitDelay * 1000),
                         cancellationToken: ct
@@ -237,6 +242,8 @@ namespace Game.LevelEditor.Runtime
         private async UniTask PerformObservationAsync(float duration, CancellationToken ct)
         {
             SetWalking(false);
+            _navAgent.isStopped = true;
+            _navAgent.updateRotation = false;
 
             float halfAngle = ScanAngle * 0.5f;
             Quaternion startRotation = transform.rotation;
@@ -272,6 +279,9 @@ namespace Game.LevelEditor.Runtime
 
             // Return to forward direction
             await RotateToAsync(startRotation, ct);
+
+            _navAgent.updateRotation = true;
+            _navAgent.isStopped = false;
         }
 
         private async UniTask RotateToAsync(Quaternion targetRotation, CancellationToken ct)
@@ -295,135 +305,35 @@ namespace Game.LevelEditor.Runtime
             }
         }
 
-        private async UniTask MoveToWaypointAsync(Vector3 targetPosition, Vector3 nextPosition, bool shouldStop, CancellationToken ct)
+        private async UniTask MoveToWaypointAsync(Vector3 targetPosition, CancellationToken ct)
         {
-            Vector3 currentPos = transform.position;
-            Vector3 toTarget = targetPosition - currentPos;
-            toTarget.y = 0f;
-
-            // Rotate towards target first if we're far or stopped
-            if (toTarget.magnitude > _smoothTurnRadius * 2f)
-            {
-                await RotateTowardsAsync(targetPosition, ct);
-            }
-
-            if (ct.IsCancellationRequested)
-            {
-                return;
-            }
-
+            _navAgent.isStopped = false;
+            _navAgent.SetDestination(targetPosition);
             SetWalking(true);
 
-            // Move towards waypoint
+            // Wait until we reach the destination
             while (!ct.IsCancellationRequested)
             {
-                currentPos = transform.position;
-                Vector3 direction = targetPosition - currentPos;
-                direction.y = 0f;
-
-                float distance = direction.magnitude;
-
-                // If stopping at waypoint, come to a complete stop
-                if (shouldStop)
+                // Check if path is still being calculated
+                if (_navAgent.pathPending)
                 {
-                    if (distance <= 0.05f)
-                    {
-                        SetWalking(false);
-                        break;
-                    }
-                }
-                else
-                {
-                    // Close enough to pass through
-                    if (distance <= 0.1f)
-                    {
-                        break;
-                    }
-
-                    // Smooth pass-through: start blending towards next waypoint when close
-                    if (distance <= _smoothTurnRadius)
-                    {
-                        Vector3 toNext = nextPosition - targetPosition;
-                        toNext.y = 0f;
-
-                        if (toNext.sqrMagnitude > 0.01f)
-                        {
-                            float blendFactor = 1f - (distance / _smoothTurnRadius);
-                            Vector3 blendedTarget = Vector3.Lerp(targetPosition, nextPosition, blendFactor * 0.5f);
-                            direction = blendedTarget - currentPos;
-                            direction.y = 0f;
-                        }
-                    }
+                    await UniTask.Yield(ct);
+                    continue;
                 }
 
-                // Move and rotate smoothly
-                if (direction.sqrMagnitude > 0.001f)
+                // Check if we've reached the destination
+                if (!_navAgent.hasPath || _navAgent.remainingDistance <= _navAgent.stoppingDistance)
                 {
-                    Vector3 moveDirection = direction.normalized;
-
-                    // Smooth rotation while moving
-                    Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-                    transform.rotation = Quaternion.RotateTowards(
-                        transform.rotation,
-                        targetRotation,
-                        _rotationSpeed * Time.deltaTime
-                    );
-
-                    // Apply gravity
-                    if (_characterController.isGrounded)
-                    {
-                        _verticalVelocity = -0.5f;
-                    }
-                    else
-                    {
-                        _verticalVelocity += _gravity * Time.deltaTime;
-                    }
-
-                    // Move using CharacterController
-                    Vector3 move = moveDirection * (_moveSpeed * Time.deltaTime);
-                    move.y = _verticalVelocity * Time.deltaTime;
-                    _characterController.Move(move);
-                }
-                else
-                {
-                    // Direction is zero, we're at the target
-                    SetWalking(false);
                     break;
                 }
 
-                await UniTask.Yield(ct);
-            }
-        }
-
-        private async UniTask RotateTowardsAsync(Vector3 targetPosition, CancellationToken ct)
-        {
-            Vector3 direction = targetPosition - transform.position;
-            direction.y = 0f;
-
-            if (direction.sqrMagnitude < 0.001f)
-            {
-                return;
-            }
-
-            Quaternion targetRotation = Quaternion.LookRotation(direction);
-
-            while (!ct.IsCancellationRequested)
-            {
-                float angle = Quaternion.Angle(transform.rotation, targetRotation);
-                if (angle < 1f)
-                {
-                    transform.rotation = targetRotation;
-                    break;
-                }
-
-                transform.rotation = Quaternion.RotateTowards(
-                    transform.rotation,
-                    targetRotation,
-                    _rotationSpeed * Time.deltaTime
-                );
+                // Update walking animation based on velocity
+                SetWalking(_navAgent.velocity.sqrMagnitude > 0.01f);
 
                 await UniTask.Yield(ct);
             }
+
+            SetWalking(false);
         }
     }
 }

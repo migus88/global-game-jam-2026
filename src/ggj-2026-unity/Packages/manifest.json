@@ -8,9 +8,17 @@
         "com.github-glitchenzo.nugetforunity",
         "jp.hadashikick.vcontainer"
       ]
+    },
+    {
+      "name": "NPM",
+      "url": "https://registry.npmjs.org",
+      "scopes": [
+        "com.fluid"
+      ]
     }
   ],
   "dependencies": {
+    "com.fluid.behavior-tree": "2.2.0",
     "com.cysharp.unitask": "2.5.10",
     "com.github-glitchenzo.nugetforunity": "4.2.0",
     "com.unity.addressables": "2.3.1",
