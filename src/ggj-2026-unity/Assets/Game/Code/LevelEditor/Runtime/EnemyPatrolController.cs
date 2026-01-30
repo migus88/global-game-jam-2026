@@ -53,7 +53,7 @@ namespace Game.LevelEditor.Runtime
 
         private void Awake()
         {
-            _animator = GetComponent<Animator>();
+            _animator = GetComponentInChildren<Animator>();
             _characterController = GetComponent<CharacterController>();
         }
 
