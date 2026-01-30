@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using Game.AI;
 using Game.Camera;
+using Game.Detection;
 using Game.LevelEditor.Data;
 using Game.Player;
 using UnityEngine;
@@ -175,7 +177,19 @@ namespace Game.LevelEditor.Runtime
             }
 
             patrolController.Initialize(enemyData.PatrolPath, levelData, worldPos);
-            patrolController.StartPatrol();
+
+            // Setup enemy behavior (will control patrol via behavior tree)
+            var behavior = enemy.GetComponent<EnemyBehavior>();
+            if (behavior != null)
+            {
+                // VisionCone should be on the enemy prefab already
+                // EnemyBehavior will start patrol in its Start method
+            }
+            else
+            {
+                // No behavior component - just start patrol directly
+                patrolController.StartPatrol();
+            }
 
             _enemyInstances.Add(enemy);
         }
