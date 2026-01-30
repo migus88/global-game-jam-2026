@@ -8,6 +8,14 @@ Global Game Jam 2026 Unity project. Unity 6000.3.6f1 targeting Desktop/PC only.
 
 **Development Philosophy:** "Quick and dirty" - prioritize working features over architecture. This is a game jam project.
 
+## Maintaining This File
+
+After implementing new features, systems, or patterns, consider whether CLAUDE.md should be updated. Add information about:
+- New key technologies or dependencies added to the project
+- Important systems, managers, or architectural patterns introduced
+- New input actions or controls
+- Project-specific conventions that emerge during development
+
 ## Development Tools
 
 - **IDE MCP** - When JetBrains IDE MCP tools are available, prefer them over standard file tools for:
