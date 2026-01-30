@@ -1,7 +1,10 @@
 using System;
 using Game.Configuration;
+using Game.Conversation.Events;
+using Game.Events;
 using UnityEngine;
 using VContainer;
+using VContainer.Unity;
 
 namespace Game.Detection
 {
@@ -23,6 +26,7 @@ namespace Game.Detection
 
         private GameConfiguration _config;
         private VisionConeSettings _settings;
+        private EventAggregator _eventAggregator;
 
         private MeshFilter _meshFilter;
         private MeshRenderer _meshRenderer;
@@ -50,10 +54,11 @@ namespace Game.Detection
         private LayerMask TargetLayer => _overrideSettings ? _targetLayerOverride : _settings.TargetLayer;
 
         [Inject]
-        public void Construct(GameConfiguration config)
+        public void Construct(GameConfiguration config, EventAggregator eventAggregator)
         {
             _config = config;
             _settings = config.VisionCone;
+            _eventAggregator = eventAggregator;
         }
 
         private void Awake()
@@ -63,6 +68,8 @@ namespace Game.Detection
 
         private void Start()
         {
+            ResolveDependenciesIfNeeded();
+
             if (_settings == null)
             {
                 Debug.LogWarning($"VisionCone on {gameObject.name}: No GameConfiguration injected. Using default values.");
@@ -72,6 +79,23 @@ namespace Game.Detection
             InitializeMesh();
             CreateMaterial();
             UpdateVisual(0f);
+        }
+
+        private void ResolveDependenciesIfNeeded()
+        {
+            if (_eventAggregator != null)
+            {
+                return;
+            }
+
+            var lifetimeScope = FindAnyObjectByType<LifetimeScope>();
+
+            if (lifetimeScope == null)
+            {
+                return;
+            }
+
+            _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
         }
 
         private void Update()
@@ -204,6 +228,7 @@ namespace Game.Detection
                 {
                     _isDetected = true;
                     Detected?.Invoke(_currentTarget);
+                    _eventAggregator?.Publish(new PlayerCaughtEvent(transform.root, _currentTarget));
                 }
             }
             else

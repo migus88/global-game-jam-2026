@@ -1,4 +1,5 @@
 using Game.Configuration;
+using Game.Conversation.Data;
 using Game.Events;
 using Game.Hiding;
 using Game.LevelEditor.Data;
@@ -13,6 +14,7 @@ public class GameLifetimeScope : LifetimeScope
     [SerializeField] private LevelConfiguration _levelConfiguration;
     [SerializeField] private SoundConfiguration _soundConfiguration;
     [SerializeField] private HideConfiguration _hideConfiguration;
+    [SerializeField] private ConversationConfiguration _conversationConfiguration;
 
     protected override void Configure(IContainerBuilder builder)
     {
@@ -35,6 +37,11 @@ public class GameLifetimeScope : LifetimeScope
         if (_hideConfiguration != null)
         {
             builder.RegisterInstance(_hideConfiguration);
+        }
+
+        if (_conversationConfiguration != null)
+        {
+            builder.RegisterInstance(_conversationConfiguration);
         }
     }
 }
