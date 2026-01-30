@@ -219,40 +219,15 @@ MonoBehaviour:
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
   - _enemyPrefab:
-      m_AssetGUID: d765beb68370241b4bdef758038b53e6
+      m_AssetGUID: 9098d725eed69429392cae96097626bd
       m_SubObjectName: 
       m_SubObjectGUID: 
       m_SubObjectType: 
-      m_EditorAssetChanged: 1
+      m_EditorAssetChanged: 0
     _spawnPosition: {x: 11, y: 17}
     _initialRotation: 0
     _patrolPath:
     - <GridPosition>k__BackingField: {x: 11, y: 12}
-      <WaitDelay>k__BackingField: 0
-      <AnimatorParameterName>k__BackingField: 
-      <AnimatorParameterValue>k__BackingField: 0
-  - _enemyPrefab:
-      m_AssetGUID: d765beb68370241b4bdef758038b53e6
-      m_SubObjectName: 
-      m_SubObjectGUID: 
-      m_SubObjectType: 
-      m_EditorAssetChanged: 1
-    _spawnPosition: {x: 17, y: 17}
-    _initialRotation: 0
-    _patrolPath:
-    - <GridPosition>k__BackingField: {x: 17, y: 11}
-      <WaitDelay>k__BackingField: 0
-      <AnimatorParameterName>k__BackingField: 
-      <AnimatorParameterValue>k__BackingField: 0
-    - <GridPosition>k__BackingField: {x: 16, y: 9}
-      <WaitDelay>k__BackingField: 0
-      <AnimatorParameterName>k__BackingField: 
-      <AnimatorParameterValue>k__BackingField: 0
-    - <GridPosition>k__BackingField: {x: 17, y: 6}
-      <WaitDelay>k__BackingField: 0
-      <AnimatorParameterName>k__BackingField: 
-      <AnimatorParameterValue>k__BackingField: 0
-    - <GridPosition>k__BackingField: {x: 11, y: 8}
       <WaitDelay>k__BackingField: 0
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
@@ -286,6 +261,35 @@ MonoBehaviour:
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
     - <GridPosition>k__BackingField: {x: 7, y: 4}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+  - _enemyPrefab:
+      m_AssetGUID: 66619ec846a1e46f595606d6ca14ca93
+      m_SubObjectName: 
+      m_SubObjectGUID: 
+      m_SubObjectType: 
+      m_EditorAssetChanged: 0
+    _spawnPosition: {x: 17, y: 17}
+    _initialRotation: 0
+    _patrolPath:
+    - <GridPosition>k__BackingField: {x: 17, y: 6}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 14, y: 3}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 16, y: 4}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 14, y: 4}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 16, y: 6}
       <WaitDelay>k__BackingField: 0
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
