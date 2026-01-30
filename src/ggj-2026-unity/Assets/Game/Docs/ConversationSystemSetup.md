@@ -65,26 +65,22 @@ This handles pausing/resuming the game via `Time.timeScale`.
 ```
 ConversationCanvas
 ├── Container (Panel)
-│   ├── QuestionText (TextMeshPro)
-│   ├── AnswersContainer
-│   │   ├── AnswerButton0 (Button + TextMeshPro child)
-│   │   ├── AnswerButton1 (Button + TextMeshPro child)
-│   │   ├── AnswerButton2 (Button + TextMeshPro child)
-│   │   └── AnswerButton3 (Button + TextMeshPro child)
-│   └── ResponseContainer
-│       └── ResponseText (TextMeshPro)
+│   ├── DialogueText (TextMeshPro) - Shows question, then response
+│   └── AnswersContainer
+│       ├── AnswerButton0 (Button + TextMeshPro child)
+│       ├── AnswerButton1 (Button + TextMeshPro child)
+│       ├── AnswerButton2 (Button + TextMeshPro child)
+│       └── AnswerButton3 (Button + TextMeshPro child)
 ```
 
 **Add Component:** `ConversationUI` to the root Canvas
 
 **Assign:**
 - **Container** - The main panel that shows/hides
-- **Question Text** - TextMeshPro for robot's question
+- **Dialogue Text** - TextMeshPro for robot's dialogue (question and response)
 - **Answers Container** - Parent of answer buttons
 - **Answer Buttons** - Array of 4 Button components
 - **Answer Texts** - Array of 4 TextMeshPro components (children of buttons)
-- **Response Container** - Panel for robot's response
-- **Response Text** - TextMeshPro for robot's response
 
 ### 6. GameOverUI
 
@@ -93,15 +89,13 @@ ConversationCanvas
 ```
 GameOverCanvas
 └── Container (Panel)
-    ├── GameOverTitle (TextMeshPro) - "GAME OVER"
-    └── ReasonText (TextMeshPro) - Shows why (e.g., "You were caught!")
+    └── GameOverTitle (TextMeshPro) - "GAME OVER"
 ```
 
 **Add Component:** `GameOverUI`
 
 **Assign:**
 - **Container** - The panel that shows/hides
-- **Reason Text** - TextMeshPro to display the reason
 
 ---
 

@@ -1,6 +1,5 @@
 using Game.Events;
 using Game.GameState.Events;
-using TMPro;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -11,9 +10,6 @@ namespace Game.GameState
     {
         [SerializeField]
         private GameObject _container;
-
-        [SerializeField]
-        private TextMeshProUGUI _reasonText;
 
         private EventAggregator _eventAggregator;
 
@@ -57,11 +53,6 @@ namespace Game.GameState
         private void OnGameOver(GameOverEvent evt)
         {
             _container?.SetActive(true);
-
-            if (_reasonText != null)
-            {
-                _reasonText.text = evt.Reason;
-            }
         }
     }
 }

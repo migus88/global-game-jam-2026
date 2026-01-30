@@ -15,7 +15,7 @@ MonoBehaviour:
   <HideEffectPrefab>k__BackingField: {fileID: 0}
   <EffectDuration>k__BackingField: 1
   <EffectPoolSize>k__BackingField: 5
-  <HideCooldown>k__BackingField: 0.5
+  <HideCooldown>k__BackingField: 0.3
   <HintButtonSprite>k__BackingField: {fileID: 21300000, guid: 07e33b0f2c66e46d385b71219ce05d40, type: 3}
   <HintSize>k__BackingField: 0.5
   <HintColor>k__BackingField: {r: 1, g: 1, b: 1, a: 1}

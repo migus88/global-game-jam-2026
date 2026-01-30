@@ -11,8 +11,8 @@ namespace Game.Conversation
         [SerializeField, Header("Container")]
         private GameObject _container;
 
-        [SerializeField, Header("Question")]
-        private TextMeshProUGUI _questionText;
+        [SerializeField, Header("Text")]
+        private TextMeshProUGUI _dialogueText;
 
         [SerializeField, Header("Answers")]
         private GameObject _answersContainer;
@@ -22,12 +22,6 @@ namespace Game.Conversation
 
         [SerializeField]
         private TextMeshProUGUI[] _answerTexts;
-
-        [SerializeField, Header("Response")]
-        private GameObject _responseContainer;
-
-        [SerializeField]
-        private TextMeshProUGUI _responseText;
 
         public event Action<int> AnswerSelected;
 
@@ -56,12 +50,11 @@ namespace Game.Conversation
         public void ShowQuestion(ConversationQuestion question)
         {
             _container?.SetActive(true);
-            _responseContainer?.SetActive(false);
             _answersContainer?.SetActive(true);
 
-            if (_questionText != null)
+            if (_dialogueText != null)
             {
-                _questionText.text = question.Text;
+                _dialogueText.text = question.Text;
             }
 
             for (int i = 0; i < _answerButtons.Length; i++)
@@ -85,11 +78,10 @@ namespace Game.Conversation
         public void ShowResponse(ConversationResponse response)
         {
             _answersContainer?.SetActive(false);
-            _responseContainer?.SetActive(true);
 
-            if (_responseText != null)
+            if (_dialogueText != null)
             {
-                _responseText.text = response.Text;
+                _dialogueText.text = response.Text;
             }
         }
 

@@ -1,5 +1,80 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4155370195430150668
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 307087382525342928}
+  - component: {fileID: 77059888114953171}
+  m_Layer: 0
+  m_Name: ConversationCamera
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &307087382525342928
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4155370195430150668}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.0034280648, y: -0.99594617, z: 0.043350544, w: 0.07874216}
+  m_LocalPosition: {x: 0.28958893, y: 1.4046236, z: 1.3399258}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1784658408509232706}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &77059888114953171
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4155370195430150668}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
+  Priority:
+    Enabled: 1
+    m_Value: 0
+  OutputChannel: 1
+  StandbyUpdate: 2
+  m_StreamingVersion: 20241001
+  m_LegacyPriority: 0
+  Target:
+    TrackingTarget: {fileID: 0}
+    LookAtTarget: {fileID: 0}
+    CustomLookAtTarget: 0
+  Lens:
+    FieldOfView: 60.000004
+    OrthographicSize: 10
+    NearClipPlane: 0.2
+    FarClipPlane: 500
+    Dutch: 0
+    ModeOverride: 0
+    PhysicalProperties:
+      GateFit: 2
+      SensorSize: {x: 21.946, y: 16.002}
+      LensShift: {x: 0, y: 0}
+      FocusDistance: 10
+      Iso: 200
+      ShutterSpeed: 0.005
+      Aperture: 16
+      BladeCount: 5
+      Curvature: {x: 2, y: 11}
+      BarrelClipping: 0.25
+      Anamorphism: 0
+  BlendHint: 0
 --- !u!1 &5009071700233146085
 GameObject:
   m_ObjectHideFlags: 0
@@ -12,6 +87,7 @@ GameObject:
   - component: {fileID: 6506769245644826815}
   - component: {fileID: 7839184589496811335}
   - component: {fileID: 3426935368618551544}
+  - component: {fileID: -6485917993683835761}
   m_Layer: 0
   m_Name: Robot 01
   m_TagString: Untagged
@@ -35,6 +111,7 @@ Transform:
   - {fileID: 9113484677593852639}
   - {fileID: 5844386631180544899}
   - {fileID: 8163275298013162447}
+  - {fileID: 307087382525342928}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &6506769245644826815
@@ -49,7 +126,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7870d0d48ebbb4347a6e19dd9512351e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.LevelEditor.Runtime.EnemyPatrolController
-  _patrolWaypoints: []
+  _patrolWaypoints:
+  - <Position>k__BackingField: {x: 67.5, y: 0, z: 17.5}
+    <WaitDelay>k__BackingField: 3
+    <IsObservation>k__BackingField: 1
+    <AnimatorParameterName>k__BackingField: 
+    <AnimatorParameterValue>k__BackingField: 0
+  - <Position>k__BackingField: {x: 66.5, y: 0, z: 3.5}
+    <WaitDelay>k__BackingField: 3
+    <IsObservation>k__BackingField: 1
+    <AnimatorParameterName>k__BackingField: 
+    <AnimatorParameterValue>k__BackingField: 0
+  - <Position>k__BackingField: {x: 67.5, y: 0, z: 17.5}
+    <WaitDelay>k__BackingField: 3
+    <IsObservation>k__BackingField: 1
+    <AnimatorParameterName>k__BackingField: 
+    <AnimatorParameterValue>k__BackingField: 0
   _patrolSpeed: 3
   _rotationSpeed: 180
   _rotateBeforeMoveThreshold: 30
@@ -98,6 +190,21 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!114 &-6485917993683835761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5009071700233146085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cbfb030045ce0410d851ce4b186f59e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Conversation.EnemyConversationHandler
+  _conversationCamera: {fileID: 77059888114953171}
+  _conversationCameraPriority: 20
+  _visionCone: {fileID: 3618264122071139747}
 --- !u!1 &6489706564159420015
 GameObject:
   m_ObjectHideFlags: 0
