@@ -2,8 +2,10 @@ Shader "Game/VisionCone"
 {
     Properties
     {
-        _Color ("Color", Color) = (0, 1, 0, 0.3)
+        _BaseColor ("Base Color", Color) = (0, 1, 0, 0.3)
+        _FillColor ("Fill Color", Color) = (1, 0, 0, 0.6)
         _Fill ("Fill", Range(0, 1)) = 0
+        _MaxDistance ("Max Distance", Float) = 10
     }
 
     SubShader
@@ -18,7 +20,7 @@ Shader "Game/VisionCone"
         Pass
         {
             Name "VisionCone"
-            
+
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
             Cull Off
@@ -39,11 +41,14 @@ Shader "Game/VisionCone"
             {
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
+                float3 positionOS : TEXCOORD1;
             };
 
             CBUFFER_START(UnityPerMaterial)
-                float4 _Color;
+                float4 _BaseColor;
+                float4 _FillColor;
                 float _Fill;
+                float _MaxDistance;
             CBUFFER_END
 
             Varyings vert(Attributes input)
@@ -51,23 +56,49 @@ Shader "Game/VisionCone"
                 Varyings output;
                 output.positionHCS = TransformObjectToHClip(input.positionOS.xyz);
                 output.uv = input.uv;
+                output.positionOS = input.positionOS.xyz;
                 return output;
             }
 
             half4 frag(Varyings input) : SV_Target
             {
-                float distanceFromCenter = input.uv.y;
-                
-                // Base color with distance fade
-                half4 color = _Color;
-                color.a *= (1.0 - distanceFromCenter * 0.5);
-                
-                // Fill effect - brighter near center based on fill amount
-                float fillIntensity = saturate(_Fill * 2.0) * (1.0 - distanceFromCenter);
-                color.rgb += fillIntensity * 0.3;
-                color.a += fillIntensity * 0.2;
-                
-                return color;
+                // Calculate distance from center (origin) in local space
+                float distFromCenter = length(input.positionOS.xz);
+                float normalizedDist = distFromCenter / _MaxDistance;
+
+                // UV.x contains the actual ray hit distance ratio (accounts for obstacles)
+                float actualDistRatio = input.uv.x;
+
+                // Base visibility - fade out towards edges
+                float edgeFade = 1.0 - smoothstep(0.7, 1.0, actualDistRatio);
+
+                // Fill effect: fills from center outward based on _Fill value
+                // The fill extends from 0 to (_Fill * maxDistance)
+                float fillThreshold = _Fill;
+                float fillMask = step(normalizedDist, fillThreshold);
+
+                // Smooth transition at fill edge
+                float fillEdge = smoothstep(fillThreshold - 0.05, fillThreshold, normalizedDist);
+                fillMask = 1.0 - fillEdge;
+
+                // Only show fill where we actually have vision (not blocked by obstacles)
+                fillMask *= step(normalizedDist, actualDistRatio + 0.01);
+
+                // Combine colors
+                half4 baseWithFade = _BaseColor;
+                baseWithFade.a *= edgeFade;
+
+                half4 fillWithFade = _FillColor;
+                fillWithFade.a *= edgeFade;
+
+                // Lerp between base and fill based on fill mask
+                half4 finalColor = lerp(baseWithFade, fillWithFade, fillMask * _Fill);
+
+                // Add slight pulse effect when detecting
+                float pulse = sin(_Time.y * 4.0) * 0.5 + 0.5;
+                finalColor.a += fillMask * _Fill * pulse * 0.1;
+
+                return finalColor;
             }
             ENDHLSL
         }

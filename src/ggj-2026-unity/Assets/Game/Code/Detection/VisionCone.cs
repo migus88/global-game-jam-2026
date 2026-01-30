@@ -7,8 +7,10 @@ namespace Game.Detection
 {
     public class VisionCone : MonoBehaviour
     {
-        private static readonly int ColorProperty = Shader.PropertyToID("_Color");
+        private static readonly int BaseColorProperty = Shader.PropertyToID("_BaseColor");
+        private static readonly int FillColorProperty = Shader.PropertyToID("_FillColor");
         private static readonly int FillProperty = Shader.PropertyToID("_Fill");
+        private static readonly int MaxDistanceProperty = Shader.PropertyToID("_MaxDistance");
 
         public event Action<Transform> Detected;
         public event Action LostTarget;
@@ -16,6 +18,8 @@ namespace Game.Detection
         [SerializeField] private bool _overrideSettings;
         [SerializeField] private float _viewDistance = 10f;
         [SerializeField, Range(10f, 180f)] private float _viewAngle = 60f;
+        [SerializeField] private LayerMask _obstacleLayerOverride;
+        [SerializeField] private LayerMask _targetLayerOverride;
 
         private GameConfiguration _config;
         private VisionConeSettings _settings;
@@ -25,12 +29,25 @@ namespace Game.Detection
         private Material _material;
         private Mesh _coneMesh;
 
+        private Vector3[] _vertices;
+        private Vector2[] _uvs;
+        private int[] _triangles;
+        private float[] _rayDistances;
+        private int _segments;
+        private float _heightOffset;
+
         private Transform _currentTarget;
         private float _detectionProgress;
         private bool _isDetected;
 
+        public float DetectionProgress => _detectionProgress;
+        public bool IsDetected => _isDetected;
+        public Transform CurrentTarget => _currentTarget;
+
         private float ViewDistance => _overrideSettings ? _viewDistance : _settings.ViewDistance;
         private float ViewAngle => _overrideSettings ? _viewAngle : _settings.ViewAngle;
+        private LayerMask ObstacleLayer => _overrideSettings ? _obstacleLayerOverride : _settings.ObstacleLayer;
+        private LayerMask TargetLayer => _overrideSettings ? _targetLayerOverride : _settings.TargetLayer;
 
         [Inject]
         public void Construct(GameConfiguration config)
@@ -52,13 +69,14 @@ namespace Game.Detection
                 _overrideSettings = true;
             }
 
-            GenerateConeMesh();
+            InitializeMesh();
             CreateMaterial();
             UpdateVisual(0f);
         }
 
         private void Update()
         {
+            UpdateConeMesh();
             UpdateDetection();
             UpdateVisual(_detectionProgress);
         }
@@ -84,48 +102,76 @@ namespace Game.Detection
             _meshRenderer.receiveShadows = false;
         }
 
-        private void GenerateConeMesh()
+        private void InitializeMesh()
         {
-            int segments = _settings?.ConeSegments ?? 24;
-            float heightOffset = _settings?.ConeHeightOffset ?? 0.05f;
+            _segments = _settings?.ConeSegments ?? 32;
+            _heightOffset = _settings?.ConeHeightOffset ?? 0.05f;
 
             _coneMesh = new Mesh { name = "VisionCone" };
+            _coneMesh.MarkDynamic();
 
-            var vertices = new Vector3[segments + 2];
-            var triangles = new int[segments * 3];
-            var uvs = new Vector2[segments + 2];
+            _vertices = new Vector3[_segments + 2];
+            _uvs = new Vector2[_segments + 2];
+            _triangles = new int[_segments * 3];
+            _rayDistances = new float[_segments + 1];
 
             // Center vertex
-            vertices[0] = new Vector3(0f, heightOffset, 0f);
-            uvs[0] = new Vector2(0.5f, 0f);
+            _vertices[0] = new Vector3(0f, _heightOffset, 0f);
+            _uvs[0] = new Vector2(0f, 0f);
 
-            float halfAngle = ViewAngle * 0.5f * Mathf.Deg2Rad;
-            float angleStep = ViewAngle * Mathf.Deg2Rad / segments;
-
-            for (int i = 0; i <= segments; i++)
+            // Setup triangles (these don't change)
+            for (int i = 0; i < _segments; i++)
             {
-                float angle = -halfAngle + angleStep * i;
-                float x = Mathf.Sin(angle) * ViewDistance;
-                float z = Mathf.Cos(angle) * ViewDistance;
-
-                vertices[i + 1] = new Vector3(x, heightOffset, z);
-                uvs[i + 1] = new Vector2((float)i / segments, 1f);
+                _triangles[i * 3] = 0;
+                _triangles[i * 3 + 1] = i + 1;
+                _triangles[i * 3 + 2] = i + 2;
             }
 
-            for (int i = 0; i < segments; i++)
-            {
-                triangles[i * 3] = 0;
-                triangles[i * 3 + 1] = i + 1;
-                triangles[i * 3 + 2] = i + 2;
-            }
-
-            _coneMesh.vertices = vertices;
-            _coneMesh.triangles = triangles;
-            _coneMesh.uv = uvs;
-            _coneMesh.RecalculateNormals();
-            _coneMesh.RecalculateBounds();
+            _coneMesh.vertices = _vertices;
+            _coneMesh.triangles = _triangles;
+            _coneMesh.uv = _uvs;
 
             _meshFilter.mesh = _coneMesh;
+        }
+
+        private void UpdateConeMesh()
+        {
+            float halfAngle = ViewAngle * 0.5f;
+            float angleStep = ViewAngle / _segments;
+            float maxDist = ViewDistance;
+            Vector3 origin = transform.position;
+
+            for (int i = 0; i <= _segments; i++)
+            {
+                float currentAngle = -halfAngle + angleStep * i;
+                Vector3 direction = Quaternion.Euler(0f, currentAngle, 0f) * transform.forward;
+
+                float hitDistance = maxDist;
+
+                if (Physics.Raycast(origin, direction, out RaycastHit hit, maxDist, ObstacleLayer))
+                {
+                    hitDistance = hit.distance;
+                }
+
+                _rayDistances[i] = hitDistance;
+
+                // Convert to local space
+                Vector3 localDir = Quaternion.Euler(0f, currentAngle, 0f) * Vector3.forward;
+                _vertices[i + 1] = new Vector3(
+                    localDir.x * hitDistance,
+                    _heightOffset,
+                    localDir.z * hitDistance
+                );
+
+                // UV.x = normalized distance (0 at center, 1 at max range)
+                // UV.y = normalized angle position
+                _uvs[i + 1] = new Vector2(hitDistance / maxDist, (float)i / _segments);
+            }
+
+            _coneMesh.vertices = _vertices;
+            _coneMesh.uv = _uvs;
+            _coneMesh.RecalculateNormals();
+            _coneMesh.RecalculateBounds();
         }
 
         private void CreateMaterial()
@@ -138,6 +184,7 @@ namespace Game.Detection
             }
 
             _material = new Material(shader);
+            _material.SetFloat(MaxDistanceProperty, ViewDistance);
             _meshRenderer.material = _material;
         }
 
@@ -145,10 +192,8 @@ namespace Game.Detection
         {
             float timeToDetect = _settings?.TimeToDetect ?? 2f;
             float timeToLose = _settings?.TimeToLoseDetection ?? 1.5f;
-            LayerMask targetLayer = _settings?.TargetLayer ?? ~0;
-            LayerMask obstacleLayer = _settings?.ObstacleLayer ?? 0;
 
-            Transform visibleTarget = FindVisibleTarget(targetLayer, obstacleLayer);
+            Transform visibleTarget = FindVisibleTarget();
 
             if (visibleTarget != null)
             {
@@ -174,26 +219,43 @@ namespace Game.Detection
             }
         }
 
-        private Transform FindVisibleTarget(LayerMask targetLayer, LayerMask obstacleLayer)
+        private Transform FindVisibleTarget()
         {
-            var colliders = Physics.OverlapSphere(transform.position, ViewDistance, targetLayer);
+            var colliders = Physics.OverlapSphere(transform.position, ViewDistance, TargetLayer);
+            Vector3 rayOrigin = transform.position + Vector3.up * _heightOffset;
 
             foreach (var col in colliders)
             {
-                Vector3 directionToTarget = (col.transform.position - transform.position).normalized;
-                float angle = Vector3.Angle(transform.forward, directionToTarget);
+                Vector3 targetPos = col.bounds.center;
 
+                // Calculate horizontal direction and distance (matching visual cone behavior)
+                Vector3 toTargetFlat = new Vector3(
+                    targetPos.x - rayOrigin.x,
+                    0f,
+                    targetPos.z - rayOrigin.z
+                );
+                float horizontalDistance = toTargetFlat.magnitude;
+                Vector3 horizontalDir = toTargetFlat.normalized;
+
+                // Check angle
+                float angle = Vector3.Angle(transform.forward, horizontalDir);
                 if (angle > ViewAngle * 0.5f)
                 {
                     continue;
                 }
 
-                float distanceToTarget = Vector3.Distance(transform.position, col.transform.position);
-
-                if (!Physics.Raycast(transform.position, directionToTarget, distanceToTarget, obstacleLayer))
+                // Cast HORIZONTAL ray (same as visual cone) to check for obstacles
+                // This matches exactly what the visual cone shows
+                if (Physics.Raycast(rayOrigin, horizontalDir, out RaycastHit hit, horizontalDistance, ObstacleLayer))
                 {
-                    return col.transform;
+                    // Obstacle blocks the path - skip this target
+                    Debug.DrawLine(rayOrigin, hit.point, Color.red);
+                    continue;
                 }
+
+                // No obstacle in the way - target is visible
+                Debug.DrawLine(rayOrigin, rayOrigin + horizontalDir * horizontalDistance, Color.green);
+                return col.transform;
             }
 
             return null;
@@ -206,22 +268,20 @@ namespace Game.Detection
                 return;
             }
 
-            Color idleColor = _settings?.IdleColor ?? new Color(0f, 1f, 0f, 0.3f);
-            Color detectingColor = _settings?.DetectingColor ?? new Color(1f, 1f, 0f, 0.5f);
-            Color alertColor = _settings?.AlertColor ?? new Color(1f, 0f, 0f, 0.6f);
+            Color baseColor = _settings?.IdleColor ?? new Color(0f, 1f, 0f, 0.3f);
+            Color fillColor = _settings?.AlertColor ?? new Color(1f, 0f, 0f, 0.6f);
 
-            Color currentColor;
-            if (progress < 0.5f)
+            // Interpolate fill color based on progress
+            if (progress > 0f && progress < 1f)
             {
-                currentColor = Color.Lerp(idleColor, detectingColor, progress * 2f);
-            }
-            else
-            {
-                currentColor = Color.Lerp(detectingColor, alertColor, (progress - 0.5f) * 2f);
+                Color detectingColor = _settings?.DetectingColor ?? new Color(1f, 1f, 0f, 0.5f);
+                fillColor = Color.Lerp(detectingColor, fillColor, progress);
             }
 
-            _material.SetColor(ColorProperty, currentColor);
+            _material.SetColor(BaseColorProperty, baseColor);
+            _material.SetColor(FillColorProperty, fillColor);
             _material.SetFloat(FillProperty, progress);
+            _material.SetFloat(MaxDistanceProperty, ViewDistance);
         }
 
         private void OnDrawGizmosSelected()
@@ -235,7 +295,21 @@ namespace Game.Detection
 
             Gizmos.DrawLine(transform.position, transform.position + leftDir * distance);
             Gizmos.DrawLine(transform.position, transform.position + rightDir * distance);
-            Gizmos.DrawLine(transform.position + leftDir * distance, transform.position + rightDir * distance);
+
+            // Draw arc
+            int arcSegments = 20;
+            float halfAngle = angle * 0.5f;
+            float angleStep = angle / arcSegments;
+            Vector3 prevPoint = transform.position + leftDir * distance;
+
+            for (int i = 1; i <= arcSegments; i++)
+            {
+                float currentAngle = -halfAngle + angleStep * i;
+                Vector3 dir = Quaternion.Euler(0, currentAngle, 0) * transform.forward;
+                Vector3 point = transform.position + dir * distance;
+                Gizmos.DrawLine(prevPoint, point);
+                prevPoint = point;
+            }
         }
     }
 }
