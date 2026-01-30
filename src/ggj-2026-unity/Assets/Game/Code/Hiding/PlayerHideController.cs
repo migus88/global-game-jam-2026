@@ -12,6 +12,9 @@ namespace Game.Hiding
 {
     public class PlayerHideController : MonoBehaviour
     {
+        [SerializeField]
+        private LayerMask _hiddenLayer;
+
         private EventAggregator _eventAggregator;
         private HideConfiguration _configuration;
         private SoundManager _soundManager;
@@ -23,6 +26,7 @@ namespace Game.Hiding
         private float _hiddenDurationTimer;
         private bool _hasPlayedHiddenDurationSound;
         private Transform _currentHidingSpot;
+        private int _originalLayer;
         private readonly List<GameObject> _hiddenChildren = new();
 
         public bool IsHidden => _isHidden;
@@ -173,9 +177,13 @@ namespace Game.Hiding
             _hiddenDurationTimer = 0f;
             _hasPlayedHiddenDurationSound = false;
 
+            PlayEnterSound(enterSoundName, hidePosition);
+
+            _originalLayer = gameObject.layer;
+            SetLayerRecursively(gameObject, GetLayerFromMask(_hiddenLayer));
+
             HidePlayerChildren();
             SpawnHideEffect(hidePosition);
-            PlayEnterSound(enterSoundName, hidePosition);
             StartCooldown();
 
             _eventAggregator?.Publish(new PlayerHideStateChangedEvent(true, hidingSpot));
@@ -203,6 +211,7 @@ namespace Game.Hiding
             _isHidden = false;
             _currentHidingSpot = null;
 
+            SetLayerRecursively(gameObject, _originalLayer);
             ShowPlayerChildren();
 
             if (previousSpot != null)
@@ -213,6 +222,36 @@ namespace Game.Hiding
             StartCooldown();
 
             _eventAggregator?.Publish(new PlayerHideStateChangedEvent(false, previousSpot));
+        }
+
+        private void SetLayerRecursively(GameObject obj, int layer)
+        {
+            obj.layer = layer;
+
+            foreach (Transform child in obj.transform)
+            {
+                SetLayerRecursively(child.gameObject, layer);
+            }
+        }
+
+        private int GetLayerFromMask(LayerMask mask)
+        {
+            var value = mask.value;
+
+            if (value == 0)
+            {
+                return 0;
+            }
+
+            for (int i = 0; i < 32; i++)
+            {
+                if ((value & (1 << i)) != 0)
+                {
+                    return i;
+                }
+            }
+
+            return 0;
         }
 
         private void HidePlayerChildren()

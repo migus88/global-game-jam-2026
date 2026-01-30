@@ -58,3 +58,6 @@ MonoBehaviour:
   - <Name>k__BackingField: HiddenInDumpster
     <Clips>k__BackingField:
     - {fileID: 8300000, guid: 3546cd12dc6bc4f11bc82f362bd9d7ff, type: 3}
+    - {fileID: 8300000, guid: 4dd8a7d92891146cc8d0f81754d91417, type: 3}
+    - {fileID: 8300000, guid: 143d01608b8724af199c78895e04dbe0, type: 3}
+    - {fileID: 8300000, guid: f1c8efd9c8c534f1a91000e4e74a5d30, type: 3}

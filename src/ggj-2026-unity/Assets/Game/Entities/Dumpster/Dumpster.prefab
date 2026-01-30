@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 6441894901482352577}
   - component: {fileID: 635286169097301089}
   - component: {fileID: 7693878822827217537}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Dumpster
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -51,7 +51,7 @@ MonoBehaviour:
   _detectionRadius: 1.58
   _playerLayer:
     serializedVersion: 2
-    m_Bits: 128
+    m_Bits: 384
   _freeObject: {fileID: 5352681299732955839}
   _occupiedObject: {fileID: 4395786999820993703}
   _enterSoundName: Dumpster_Enter
@@ -76,7 +76,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 2.18, y: 1, z: 1}
+  m_Size: {x: 2.18, y: 1.84, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &6344920956428655561
 GameObject:
@@ -88,7 +88,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6288275305792791739}
   - component: {fileID: 6837823703388331688}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: HideHint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -238,6 +238,10 @@ PrefabInstance:
       value: Closed
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: b71afee87ff2044da8d512384716f335, type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: b71afee87ff2044da8d512384716f335, type: 3}
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
@@ -315,6 +319,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 8ca41f1d7407d4fceac4a4be50b5e723, type: 3}
       propertyPath: m_Name
       value: Open
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 8ca41f1d7407d4fceac4a4be50b5e723, type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 8ca41f1d7407d4fceac4a4be50b5e723, type: 3}
       propertyPath: m_IsActive
