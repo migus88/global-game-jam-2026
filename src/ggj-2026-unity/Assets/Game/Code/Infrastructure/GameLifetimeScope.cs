@@ -28,7 +28,8 @@ public class GameLifetimeScope : LifetimeScope
         {
             builder.RegisterInstance(_soundConfiguration);
             builder.Register<SoundManager>(Lifetime.Singleton)
-                .WithParameter(_soundConfiguration);
+                .WithParameter(_soundConfiguration)
+                .WithParameter(10);
         }
 
         if (_hideConfiguration != null)

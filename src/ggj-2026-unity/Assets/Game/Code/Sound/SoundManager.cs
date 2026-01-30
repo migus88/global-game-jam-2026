@@ -16,7 +16,7 @@ namespace Game.Sound
 
         private bool _isDisposed;
 
-        public SoundManager(SoundConfiguration configuration, int poolSize = 10)
+        public SoundManager(SoundConfiguration configuration, int poolSize)
         {
             _configuration = configuration;
             _poolSize = poolSize;
