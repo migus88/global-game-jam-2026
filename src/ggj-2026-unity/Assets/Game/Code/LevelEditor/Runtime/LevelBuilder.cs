@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
-using Game.AI;
 using Game.Camera;
 using Game.LevelEditor.Data;
 using Game.Player;
@@ -168,27 +167,9 @@ namespace Game.LevelEditor.Runtime
             var enemy = _resolver.Instantiate(prefab, worldPos, rotation, _enemiesContainer);
             enemy.name = $"Enemy_{enemyData.SpawnPosition.x}_{enemyData.SpawnPosition.y}";
 
-            // Setup patrol controller
-            var patrolController = enemy.GetComponent<EnemyPatrolController>();
-            if (patrolController == null)
-            {
-                patrolController = enemy.AddComponent<EnemyPatrolController>();
-            }
-
-            patrolController.Initialize(enemyData.PatrolPath, levelData, worldPos);
-
-            // Setup enemy behavior (will control patrol via behavior tree)
-            var behavior = enemy.GetComponent<EnemyBehavior>();
-            if (behavior != null)
-            {
-                // VisionCone should be on the enemy prefab already
-                // EnemyBehavior will start patrol in its Start method
-            }
-            else
-            {
-                // No behavior component - just start patrol directly
-                patrolController.StartPatrol();
-            }
+            // Note: Patrol paths should be set up in edit mode using LevelSpawner.
+            // This runtime spawner is kept for backwards compatibility but edit-time spawning is preferred.
+            // EnemyBehavior.Start() will call StartPatrol() automatically.
 
             _enemyInstances.Add(enemy);
         }
