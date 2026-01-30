@@ -3,6 +3,7 @@ using Game.Hiding.Events;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using VContainer;
+using VContainer.Unity;
 
 namespace Game.Hiding
 {
@@ -14,8 +15,17 @@ namespace Game.Hiding
         [SerializeField]
         private LayerMask _playerLayer;
 
+        [SerializeField, Header("Visual States")]
+        private GameObject _freeObject;
+
+        [SerializeField]
+        private GameObject _occupiedObject;
+
+        [SerializeField, Header("Sound")]
+        private string _enterSoundName;
+
         [SerializeField, Header("Hint Display")]
-        private Vector3 _hintOffset = new(0f, 2f, 0f);
+        private SpriteRenderer _hintRenderer;
 
         [SerializeField, Header("Input")]
         private InputActionReference _hideActionReference;
@@ -23,10 +33,9 @@ namespace Game.Hiding
         private EventAggregator _eventAggregator;
         private HideConfiguration _configuration;
         private UnityEngine.Camera _mainCamera;
-        private GameObject _hintObject;
-        private SpriteRenderer _hintRenderer;
 
         private bool _isPlayerInRange;
+        private bool _isOccupied;
         private Transform _playerTransform;
         private readonly Collider[] _detectionResults = new Collider[1];
 
@@ -39,8 +48,13 @@ namespace Game.Hiding
 
         private void Start()
         {
+            ResolveDependenciesIfNeeded();
+
+            _eventAggregator?.Subscribe<PlayerHideStateChangedEvent>(OnPlayerHideStateChanged);
+
             _mainCamera = UnityEngine.Camera.main;
-            CreateHintDisplay();
+            InitializeHintDisplay();
+            InitializeVisualState();
 
             if (_hideActionReference != null && _hideActionReference.action != null)
             {
@@ -49,24 +63,68 @@ namespace Game.Hiding
             }
         }
 
-        private void CreateHintDisplay()
+        private void ResolveDependenciesIfNeeded()
         {
-            _hintObject = new GameObject("HideHint");
-            _hintObject.transform.SetParent(transform);
-            _hintObject.transform.localPosition = _hintOffset;
-
-            _hintRenderer = _hintObject.AddComponent<SpriteRenderer>();
-
-            if (_configuration != null)
+            if (_eventAggregator != null && _configuration != null)
             {
-                _hintRenderer.sprite = _configuration.HintButtonSprite;
-                _hintRenderer.color = _configuration.HintColor;
-
-                var size = _configuration.HintSize;
-                _hintObject.transform.localScale = new Vector3(size, size, size);
+                return;
             }
 
-            _hintObject.SetActive(false);
+            var lifetimeScope = Object.FindAnyObjectByType<LifetimeScope>();
+
+            if (lifetimeScope == null)
+            {
+                return;
+            }
+
+            _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
+            _configuration ??= lifetimeScope.Container.Resolve<HideConfiguration>();
+        }
+
+        private void InitializeVisualState()
+        {
+            if (_freeObject != null)
+            {
+                _freeObject.SetActive(true);
+            }
+
+            if (_occupiedObject != null)
+            {
+                _occupiedObject.SetActive(false);
+            }
+
+            _isOccupied = false;
+        }
+
+        private void OnPlayerHideStateChanged(PlayerHideStateChangedEvent evt)
+        {
+            if (evt.HidingSpot != transform)
+            {
+                return;
+            }
+
+            _isOccupied = evt.IsHidden;
+
+            if (_freeObject != null)
+            {
+                _freeObject.SetActive(!_isOccupied);
+            }
+
+            if (_occupiedObject != null)
+            {
+                _occupiedObject.SetActive(_isOccupied);
+            }
+        }
+
+        private void InitializeHintDisplay()
+        {
+            if (_hintRenderer != null)
+            {
+                _hintRenderer.gameObject.SetActive(false);
+                return;
+            }
+
+            Debug.LogWarning($"[HidingSpot] No hint renderer assigned on {gameObject.name}");
         }
 
         private void Update()
@@ -117,33 +175,33 @@ namespace Game.Hiding
                 return;
             }
 
-            _eventAggregator?.Publish(new HideActionRequestedEvent(transform, transform.position));
+            _eventAggregator?.Publish(new HideActionRequestedEvent(transform, transform.position, _enterSoundName));
         }
 
         private void ShowHint()
         {
-            if (_hintObject != null)
+            if (_hintRenderer != null)
             {
-                _hintObject.SetActive(true);
+                _hintRenderer.gameObject.SetActive(true);
             }
         }
 
         private void HideHint()
         {
-            if (_hintObject != null)
+            if (_hintRenderer != null)
             {
-                _hintObject.SetActive(false);
+                _hintRenderer.gameObject.SetActive(false);
             }
         }
 
         private void UpdateBillboard()
         {
-            if (_hintObject == null || !_hintObject.activeSelf || _mainCamera == null)
+            if (_hintRenderer == null || !_hintRenderer.gameObject.activeSelf || _mainCamera == null)
             {
                 return;
             }
 
-            _hintObject.transform.rotation = _mainCamera.transform.rotation;
+            _hintRenderer.transform.rotation = _mainCamera.transform.rotation;
         }
 
         private void OnDestroy()
@@ -152,6 +210,8 @@ namespace Game.Hiding
             {
                 _hideActionReference.action.performed -= OnHideActionPerformed;
             }
+
+            _eventAggregator?.Unsubscribe<PlayerHideStateChangedEvent>(OnPlayerHideStateChanged);
         }
 
         private void OnDrawGizmosSelected()
@@ -161,10 +221,6 @@ namespace Game.Hiding
 
             Gizmos.color = new Color(1f, 0.5f, 0f, 1f);
             Gizmos.DrawWireSphere(transform.position, _detectionRadius);
-
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawLine(transform.position, transform.position + _hintOffset);
-            Gizmos.DrawWireCube(transform.position + _hintOffset, new Vector3(0.5f, 0.5f, 0.1f));
         }
     }
 }

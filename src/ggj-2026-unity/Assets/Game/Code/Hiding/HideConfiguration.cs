@@ -25,5 +25,11 @@ namespace Game.Hiding
 
         [field: SerializeField]
         public Color HintColor { get; private set; } = Color.white;
+
+        [field: SerializeField, Header("Hidden Duration Sound")]
+        public float HiddenDurationThreshold { get; private set; } = 5f;
+
+        [field: SerializeField]
+        public string HiddenDurationSoundName { get; private set; } = "HiddenLong";
     }
 }

@@ -51,3 +51,10 @@ MonoBehaviour:
     <Text>k__BackingField: "My confidence is 99 percent. My accuracy is\u2026 also
       a number."
   <SoundEffects>k__BackingField: []
+  <NamedSoundEffects>k__BackingField:
+  - <Name>k__BackingField: Dumpster_Enter
+    <Clips>k__BackingField:
+    - {fileID: 8300000, guid: a4813ee4b27084bc79aa8ddcead12003, type: 3}
+  - <Name>k__BackingField: HiddenInDumpster
+    <Clips>k__BackingField:
+    - {fileID: 8300000, guid: 3546cd12dc6bc4f11bc82f362bd9d7ff, type: 3}

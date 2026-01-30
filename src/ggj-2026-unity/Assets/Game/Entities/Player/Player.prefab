@@ -46,6 +46,7 @@ GameObject:
   - component: {fileID: 6349172955468430399}
   - component: {fileID: 7027705425608581828}
   - component: {fileID: 5311973665488613118}
+  - component: {fileID: 2886762066318461919}
   m_Layer: 7
   m_Name: Player
   m_TagString: Player
@@ -281,6 +282,18 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9083156454595778573}
   m_Enabled: 1
+--- !u!114 &2886762066318461919
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9083156454595778573}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f2e7c374260e42bdba62f4e1f2369b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Hiding.PlayerHideController
 --- !u!1001 &7398789013488092493
 PrefabInstance:
   m_ObjectHideFlags: 0

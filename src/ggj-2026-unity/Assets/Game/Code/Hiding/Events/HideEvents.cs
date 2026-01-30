@@ -29,11 +29,13 @@ namespace Game.Hiding.Events
     {
         public Transform HidingSpot { get; }
         public Vector3 HidePosition { get; }
+        public string EnterSoundName { get; }
 
-        public HideActionRequestedEvent(Transform hidingSpot, Vector3 hidePosition)
+        public HideActionRequestedEvent(Transform hidingSpot, Vector3 hidePosition, string enterSoundName)
         {
             HidingSpot = hidingSpot;
             HidePosition = hidePosition;
+            EnterSoundName = enterSoundName;
         }
     }
 

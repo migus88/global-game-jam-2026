@@ -15,22 +15,36 @@ namespace Game.Sound
         [field: SerializeField, Header("Sound Effects")]
         public SoundEffectEntry[] SoundEffects { get; private set; }
 
+        [field: SerializeField, Header("Named Sound Effects")]
+        public NamedSoundEffectEntry[] NamedSoundEffects { get; private set; }
+
         private Dictionary<SoundEffectType, AudioClip[]> _soundEffectMap;
+        private Dictionary<string, AudioClip[]> _namedSoundEffectMap;
 
         public void Initialize()
         {
             _soundEffectMap = new Dictionary<SoundEffectType, AudioClip[]>();
+            _namedSoundEffectMap = new Dictionary<string, AudioClip[]>();
 
-            if (SoundEffects == null)
+            if (SoundEffects != null)
             {
-                return;
+                foreach (var entry in SoundEffects)
+                {
+                    if (entry.Type != SoundEffectType.None && entry.Clips != null && entry.Clips.Length > 0)
+                    {
+                        _soundEffectMap[entry.Type] = entry.Clips;
+                    }
+                }
             }
 
-            foreach (var entry in SoundEffects)
+            if (NamedSoundEffects != null)
             {
-                if (entry.Type != SoundEffectType.None && entry.Clips != null && entry.Clips.Length > 0)
+                foreach (var entry in NamedSoundEffects)
                 {
-                    _soundEffectMap[entry.Type] = entry.Clips;
+                    if (!string.IsNullOrEmpty(entry.Name) && entry.Clips != null && entry.Clips.Length > 0)
+                    {
+                        _namedSoundEffectMap[entry.Name] = entry.Clips;
+                    }
                 }
             }
         }
@@ -63,6 +77,26 @@ namespace Game.Sound
             }
 
             if (_soundEffectMap.TryGetValue(type, out var clips) && clips.Length > 0)
+            {
+                return clips[Random.Range(0, clips.Length)];
+            }
+
+            return null;
+        }
+
+        public AudioClip GetNamedSoundEffect(string name)
+        {
+            if (_namedSoundEffectMap == null)
+            {
+                Initialize();
+            }
+
+            if (string.IsNullOrEmpty(name))
+            {
+                return null;
+            }
+
+            if (_namedSoundEffectMap.TryGetValue(name, out var clips) && clips.Length > 0)
             {
                 return clips[Random.Range(0, clips.Length)];
             }

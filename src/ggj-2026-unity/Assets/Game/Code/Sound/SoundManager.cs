@@ -143,6 +143,30 @@ namespace Game.Sound
             }
         }
 
+        public void PlayNamedSoundEffect(string name, Vector3? position = null, float volume = 1f)
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            var clip = _configuration.GetNamedSoundEffect(name);
+
+            if (clip == null)
+            {
+                return;
+            }
+
+            if (position.HasValue)
+            {
+                PlayClipAtPosition(clip, position.Value, volume);
+            }
+            else
+            {
+                PlayClip2D(clip, volume);
+            }
+        }
+
         public void PlayClipAtPosition(AudioClip clip, Vector3 position, float volume = 1f)
         {
             if (_isDisposed || clip == null)

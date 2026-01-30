@@ -3,8 +3,10 @@ using Cysharp.Threading.Tasks;
 using Game.Events;
 using Game.Hiding.Events;
 using Game.Infrastructure;
+using Game.Sound;
 using UnityEngine;
 using VContainer;
+using VContainer.Unity;
 
 namespace Game.Hiding
 {
@@ -12,24 +14,51 @@ namespace Game.Hiding
     {
         private EventAggregator _eventAggregator;
         private HideConfiguration _configuration;
+        private SoundManager _soundManager;
         private ObjectPool<Transform> _effectPool;
 
         private bool _isHidden;
         private bool _isOnCooldown;
         private float _cooldownTimer;
+        private float _hiddenDurationTimer;
+        private bool _hasPlayedHiddenDurationSound;
         private Transform _currentHidingSpot;
         private readonly List<GameObject> _hiddenChildren = new();
 
         public bool IsHidden => _isHidden;
 
         [Inject]
-        public void Construct(EventAggregator eventAggregator, HideConfiguration configuration)
+        public void Construct(EventAggregator eventAggregator, HideConfiguration configuration, SoundManager soundManager)
         {
             _eventAggregator = eventAggregator;
             _configuration = configuration;
+            _soundManager = soundManager;
+        }
 
+        private void Start()
+        {
+            ResolveDependenciesIfNeeded();
             InitializeEffectPool();
             SubscribeToEvents();
+        }
+
+        private void ResolveDependenciesIfNeeded()
+        {
+            if (_eventAggregator != null && _configuration != null && _soundManager != null)
+            {
+                return;
+            }
+
+            var lifetimeScope = Object.FindAnyObjectByType<LifetimeScope>();
+
+            if (lifetimeScope == null)
+            {
+                return;
+            }
+
+            _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
+            _configuration ??= lifetimeScope.Container.Resolve<HideConfiguration>();
+            _soundManager ??= lifetimeScope.Container.Resolve<SoundManager>();
         }
 
         private void InitializeEffectPool()
@@ -63,6 +92,7 @@ namespace Game.Hiding
         private void Update()
         {
             UpdateCooldown();
+            UpdateHiddenDuration();
         }
 
         private void UpdateCooldown()
@@ -80,6 +110,40 @@ namespace Game.Hiding
             }
         }
 
+        private void UpdateHiddenDuration()
+        {
+            if (!_isHidden || _hasPlayedHiddenDurationSound || _configuration == null)
+            {
+                return;
+            }
+
+            _hiddenDurationTimer += Time.deltaTime;
+
+            if (_hiddenDurationTimer >= _configuration.HiddenDurationThreshold)
+            {
+                _hasPlayedHiddenDurationSound = true;
+                PlayHiddenDurationSound();
+            }
+        }
+
+        private void PlayHiddenDurationSound()
+        {
+            if (_soundManager == null || _configuration == null)
+            {
+                return;
+            }
+
+            var soundName = _configuration.HiddenDurationSoundName;
+
+            if (string.IsNullOrEmpty(soundName))
+            {
+                return;
+            }
+
+            var position = _currentHidingSpot != null ? _currentHidingSpot.position : transform.position;
+            _soundManager.PlayNamedSoundEffect(soundName, position);
+        }
+
         private void OnHideActionRequested(HideActionRequestedEvent evt)
         {
             if (_isOnCooldown)
@@ -93,11 +157,11 @@ namespace Game.Hiding
             }
             else
             {
-                Hide(evt.HidingSpot, evt.HidePosition);
+                Hide(evt.HidingSpot, evt.HidePosition, evt.EnterSoundName);
             }
         }
 
-        private void Hide(Transform hidingSpot, Vector3 hidePosition)
+        private void Hide(Transform hidingSpot, Vector3 hidePosition, string enterSoundName)
         {
             if (_isHidden)
             {
@@ -106,12 +170,25 @@ namespace Game.Hiding
 
             _isHidden = true;
             _currentHidingSpot = hidingSpot;
+            _hiddenDurationTimer = 0f;
+            _hasPlayedHiddenDurationSound = false;
 
             HidePlayerChildren();
             SpawnHideEffect(hidePosition);
+            PlayEnterSound(enterSoundName, hidePosition);
             StartCooldown();
 
             _eventAggregator?.Publish(new PlayerHideStateChangedEvent(true, hidingSpot));
+        }
+
+        private void PlayEnterSound(string soundName, Vector3 position)
+        {
+            if (_soundManager == null || string.IsNullOrEmpty(soundName))
+            {
+                return;
+            }
+
+            _soundManager.PlayNamedSoundEffect(soundName, position);
         }
 
         private void Unhide()
