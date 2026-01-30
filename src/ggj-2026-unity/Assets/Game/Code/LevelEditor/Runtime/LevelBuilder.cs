@@ -25,10 +25,15 @@ namespace Game.LevelEditor.Runtime
         private readonly List<AsyncOperationHandle<GameObject>> _loadHandles = new();
 
         [Inject]
-        public LevelBuilder(IObjectResolver resolver, LevelConfiguration config)
+        public LevelBuilder(IObjectResolver resolver, LevelConfiguration config = null)
         {
             _resolver = resolver;
             _config = config;
+
+            if (_config == null)
+            {
+                Debug.LogWarning("LevelBuilder: No LevelConfiguration provided. Walls and player spawning will be disabled.");
+            }
         }
 
         public async UniTask BuildLevelAsync(LevelData levelData)
@@ -74,6 +79,11 @@ namespace Game.LevelEditor.Runtime
 
         private async UniTask SpawnWallsAsync(LevelData levelData)
         {
+            if (_config == null)
+            {
+                return;
+            }
+
             if (_config.WallPrefab == null || !_config.WallPrefab.RuntimeKeyIsValid())
             {
                 Debug.LogWarning("No wall prefab assigned in level configuration");
@@ -177,6 +187,11 @@ namespace Game.LevelEditor.Runtime
             if (!levelData.HasPlayerSpawn)
             {
                 Debug.LogWarning("No player spawn position defined in level data");
+                return;
+            }
+
+            if (_config == null)
+            {
                 return;
             }
 

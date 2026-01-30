@@ -48,7 +48,15 @@ namespace Game.LevelEditor.Runtime
 
             private async UniTaskVoid BuildLevelAsync()
             {
-                await _levelBuilder.BuildLevelAsync(_scope._levelToLoad);
+                try
+                {
+                    await _levelBuilder.BuildLevelAsync(_scope._levelToLoad);
+                    Debug.Log("Level built successfully");
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"Failed to build level: {e}");
+                }
             }
         }
     }

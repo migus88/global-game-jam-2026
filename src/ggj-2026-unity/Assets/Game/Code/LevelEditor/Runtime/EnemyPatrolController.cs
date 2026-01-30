@@ -109,6 +109,9 @@ namespace Game.LevelEditor.Runtime
 
                 // Move to next waypoint
                 _currentWaypointIndex = nextIndex;
+
+                // Always yield at least once per loop iteration to prevent freezing
+                await UniTask.Yield(ct);
             }
 
             _isPatrolling = false;
@@ -151,6 +154,12 @@ namespace Game.LevelEditor.Runtime
                 }
                 else
                 {
+                    // Close enough to pass through
+                    if (distance <= 0.1f)
+                    {
+                        break;
+                    }
+
                     // Smooth pass-through: start blending towards next waypoint when close
                     if (distance <= _smoothTurnRadius)
                     {
@@ -164,12 +173,6 @@ namespace Game.LevelEditor.Runtime
                             Vector3 blendedTarget = Vector3.Lerp(targetPosition, nextPosition, blendFactor * 0.5f);
                             direction = blendedTarget - currentPos;
                             direction.y = 0f;
-                        }
-
-                        // Close enough to pass through
-                        if (distance <= 0.1f)
-                        {
-                            break;
                         }
                     }
                 }
@@ -187,9 +190,15 @@ namespace Game.LevelEditor.Runtime
                         _rotationSpeed * Time.deltaTime
                     );
 
-                    // Move forward
-                    Vector3 newPosition = currentPos + transform.forward * (_moveSpeed * Time.deltaTime);
+                    // Move towards target direction (not transform.forward)
+                    float step = _moveSpeed * Time.deltaTime;
+                    Vector3 newPosition = currentPos + moveDirection * step;
                     transform.position = newPosition;
+                }
+                else
+                {
+                    // Direction is zero, we're at the target
+                    break;
                 }
 
                 await UniTask.Yield(ct);

@@ -8,17 +8,30 @@ namespace Game.LevelEditor.Data
     [Serializable]
     public class EnemySpawnData
     {
-        [field: SerializeField]
-        public AssetReferenceGameObject EnemyPrefab { get; set; }
+        [SerializeField] private AssetReferenceGameObject _enemyPrefab;
+        [SerializeField] private Vector2Int _spawnPosition;
+        [SerializeField, Range(0f, 360f)] private float _initialRotation;
+        [SerializeField] private List<PatrolWaypoint> _patrolPath = new();
 
-        [field: SerializeField]
-        public Vector2Int SpawnPosition { get; set; }
+        public AssetReferenceGameObject EnemyPrefab
+        {
+            get => _enemyPrefab;
+            set => _enemyPrefab = value;
+        }
 
-        [field: SerializeField, Range(0f, 360f)]
-        public float InitialRotation { get; set; }
+        public Vector2Int SpawnPosition
+        {
+            get => _spawnPosition;
+            set => _spawnPosition = value;
+        }
 
-        [field: SerializeField]
-        public List<PatrolWaypoint> PatrolPath { get; private set; } = new();
+        public float InitialRotation
+        {
+            get => _initialRotation;
+            set => _initialRotation = value;
+        }
+
+        public List<PatrolWaypoint> PatrolPath => _patrolPath;
 
         public EnemySpawnData()
         {
@@ -26,25 +39,25 @@ namespace Game.LevelEditor.Data
 
         public EnemySpawnData(Vector2Int spawnPosition)
         {
-            SpawnPosition = spawnPosition;
+            _spawnPosition = spawnPosition;
         }
 
         public void AddWaypoint(PatrolWaypoint waypoint)
         {
-            PatrolPath.Add(waypoint);
+            _patrolPath.Add(waypoint);
         }
 
         public void RemoveWaypoint(int index)
         {
-            if (index >= 0 && index < PatrolPath.Count)
+            if (index >= 0 && index < _patrolPath.Count)
             {
-                PatrolPath.RemoveAt(index);
+                _patrolPath.RemoveAt(index);
             }
         }
 
         public void ClearPatrolPath()
         {
-            PatrolPath.Clear();
+            _patrolPath.Clear();
         }
     }
 }

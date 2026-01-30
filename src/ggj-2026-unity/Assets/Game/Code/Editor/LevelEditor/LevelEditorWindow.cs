@@ -39,6 +39,7 @@ namespace Game.Editor.LevelEditor
         private Vector2 _lastMousePos;
         private ReorderableList _waypointList;
         private Vector2 _sidebarScroll;
+        private SerializedObject _serializedLevelData;
 
         private const float MinZoom = 5f;
         private const float MaxZoom = 50f;
@@ -55,21 +56,46 @@ namespace Game.Editor.LevelEditor
         public static void Open(LevelData levelData)
         {
             var window = GetWindow<LevelEditorWindow>("Level Editor");
-            window._levelData = levelData;
+            window.SetLevelData(levelData);
             window.minSize = new Vector2(600f, 400f);
             window.CenterGrid();
+        }
+
+        private void SetLevelData(LevelData levelData)
+        {
+            _levelData = levelData;
+            _serializedLevelData = levelData != null ? new SerializedObject(levelData) : null;
+            _selectedEnemyIndex = -1;
+            _waypointList = null;
         }
 
         private void OnEnable()
         {
             SceneView.duringSceneGui += OnSceneGUI;
-            Undo.undoRedoPerformed += Repaint;
+            Undo.undoRedoPerformed += OnUndoRedo;
+
+            // Initialize serialized object if we have level data
+            if (_levelData != null && _serializedLevelData == null)
+            {
+                _serializedLevelData = new SerializedObject(_levelData);
+            }
+        }
+
+        private void OnUndoRedo()
+        {
+            // Refresh serialized object after undo/redo
+            if (_levelData != null)
+            {
+                _serializedLevelData = new SerializedObject(_levelData);
+            }
+
+            Repaint();
         }
 
         private void OnDisable()
         {
             SceneView.duringSceneGui -= OnSceneGUI;
-            Undo.undoRedoPerformed -= Repaint;
+            Undo.undoRedoPerformed -= OnUndoRedo;
         }
 
         private void OnGUI()
@@ -97,9 +123,10 @@ namespace Game.Editor.LevelEditor
 
             // Level data field
             EditorGUI.BeginChangeCheck();
-            _levelData = (LevelData)EditorGUILayout.ObjectField(_levelData, typeof(LevelData), false, GUILayout.Width(200f));
+            var newLevelData = (LevelData)EditorGUILayout.ObjectField(_levelData, typeof(LevelData), false, GUILayout.Width(200f));
             if (EditorGUI.EndChangeCheck())
             {
+                SetLevelData(newLevelData);
                 CenterGrid();
             }
 
@@ -433,16 +460,31 @@ namespace Game.Editor.LevelEditor
 
             EditorGUILayout.LabelField("Selected Enemy", EditorStyles.boldLabel);
 
-            // Enemy prefab reference
-            EditorGUI.BeginChangeCheck();
-            var prefabObj = GetAssetReferenceObject(spawn.EnemyPrefab);
-            var newPrefabObj = EditorGUILayout.ObjectField("Enemy Prefab", prefabObj, typeof(GameObject), false);
-            if (EditorGUI.EndChangeCheck())
+            // Enemy prefab reference using SerializedProperty for proper AssetReference drawer
+            if (_serializedLevelData == null)
             {
-                Undo.RecordObject(_levelData, "Change Enemy Prefab");
-                SetAssetReferenceFromObject(spawn, newPrefabObj as GameObject);
-                EditorUtility.SetDirty(_levelData);
+                _serializedLevelData = new SerializedObject(_levelData);
             }
+
+            _serializedLevelData.Update();
+
+            var enemySpawnsProperty = _serializedLevelData.FindProperty("_enemySpawns");
+            if (enemySpawnsProperty != null && _selectedEnemyIndex < enemySpawnsProperty.arraySize)
+            {
+                var enemyProperty = enemySpawnsProperty.GetArrayElementAtIndex(_selectedEnemyIndex);
+                var prefabProperty = enemyProperty.FindPropertyRelative("_enemyPrefab");
+
+                if (prefabProperty != null)
+                {
+                    EditorGUILayout.PropertyField(prefabProperty, new GUIContent("Enemy Prefab"));
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox("Could not find EnemyPrefab property", MessageType.Warning);
+                }
+            }
+
+            _serializedLevelData.ApplyModifiedProperties();
 
             EditorGUI.BeginChangeCheck();
             var rotation = EditorGUILayout.Slider("Initial Rotation", spawn.InitialRotation, 0f, 360f);
@@ -481,7 +523,6 @@ namespace Game.Editor.LevelEditor
                 return "(None)";
             }
 
-#if UNITY_EDITOR
             var path = AssetDatabase.GUIDToAssetPath(assetRef.AssetGUID);
             if (!string.IsNullOrEmpty(path))
             {
@@ -491,43 +532,8 @@ namespace Game.Editor.LevelEditor
                     return asset.name;
                 }
             }
-#endif
+
             return assetRef.AssetGUID;
-        }
-
-        private static GameObject GetAssetReferenceObject(AssetReferenceGameObject assetRef)
-        {
-            if (assetRef == null || !assetRef.RuntimeKeyIsValid())
-            {
-                return null;
-            }
-
-#if UNITY_EDITOR
-            var path = AssetDatabase.GUIDToAssetPath(assetRef.AssetGUID);
-            if (!string.IsNullOrEmpty(path))
-            {
-                return AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            }
-#endif
-            return null;
-        }
-
-        private static void SetAssetReferenceFromObject(EnemySpawnData spawn, GameObject prefab)
-        {
-            if (prefab == null)
-            {
-                spawn.EnemyPrefab = null;
-                return;
-            }
-
-#if UNITY_EDITOR
-            var path = AssetDatabase.GetAssetPath(prefab);
-            if (!string.IsNullOrEmpty(path))
-            {
-                var guid = AssetDatabase.AssetPathToGUID(path);
-                spawn.EnemyPrefab = new AssetReferenceGameObject(guid);
-            }
-#endif
         }
 
         private void RebuildWaypointList()
