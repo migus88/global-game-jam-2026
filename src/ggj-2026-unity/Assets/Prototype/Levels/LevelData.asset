@@ -15,7 +15,150 @@ MonoBehaviour:
   <GridSize>k__BackingField: {x: 20, y: 20}
   <CellSize>k__BackingField: 1
   <GridOrigin>k__BackingField: {x: 0, y: 0, z: 0}
-  _wallPositions: []
-  _playerSpawnPosition: {x: 0, y: 0}
-  _hasPlayerSpawn: 0
-  _enemySpawns: []
+  _wallPositions:
+  - {x: 1, y: 0}
+  - {x: 1, y: 1}
+  - {x: 1, y: 2}
+  - {x: 1, y: 3}
+  - {x: 1, y: 4}
+  - {x: 2, y: 4}
+  - {x: 3, y: 4}
+  - {x: 4, y: 4}
+  - {x: 5, y: 4}
+  - {x: 3, y: 2}
+  - {x: 4, y: 2}
+  - {x: 5, y: 2}
+  - {x: 6, y: 2}
+  - {x: 7, y: 2}
+  - {x: 7, y: 3}
+  - {x: 7, y: 4}
+  - {x: 7, y: 5}
+  - {x: 7, y: 6}
+  - {x: 1, y: 10}
+  - {x: 2, y: 10}
+  - {x: 3, y: 10}
+  - {x: 4, y: 10}
+  - {x: 5, y: 10}
+  - {x: 6, y: 10}
+  - {x: 7, y: 10}
+  - {x: 8, y: 10}
+  - {x: 9, y: 10}
+  - {x: 10, y: 10}
+  - {x: 11, y: 10}
+  - {x: 12, y: 10}
+  - {x: 12, y: 11}
+  - {x: 13, y: 11}
+  - {x: 12, y: 1}
+  - {x: 12, y: 2}
+  - {x: 12, y: 3}
+  - {x: 12, y: 4}
+  - {x: 12, y: 5}
+  - {x: 12, y: 6}
+  - {x: 12, y: 7}
+  - {x: 12, y: 8}
+  - {x: 14, y: 0}
+  - {x: 15, y: 0}
+  - {x: 16, y: 0}
+  - {x: 17, y: 0}
+  - {x: 18, y: 0}
+  - {x: 18, y: 1}
+  - {x: 19, y: 1}
+  - {x: 19, y: 2}
+  - {x: 19, y: 3}
+  - {x: 19, y: 4}
+  - {x: 19, y: 5}
+  - {x: 19, y: 6}
+  - {x: 19, y: 7}
+  - {x: 19, y: 8}
+  - {x: 18, y: 8}
+  - {x: 17, y: 8}
+  - {x: 16, y: 8}
+  - {x: 4, y: 15}
+  - {x: 5, y: 14}
+  - {x: 6, y: 14}
+  - {x: 7, y: 14}
+  - {x: 8, y: 14}
+  - {x: 9, y: 14}
+  - {x: 10, y: 15}
+  - {x: 11, y: 15}
+  - {x: 12, y: 15}
+  - {x: 13, y: 15}
+  - {x: 14, y: 15}
+  - {x: 14, y: 16}
+  - {x: 13, y: 16}
+  - {x: 13, y: 17}
+  - {x: 12, y: 17}
+  - {x: 11, y: 17}
+  - {x: 10, y: 18}
+  - {x: 9, y: 18}
+  - {x: 8, y: 18}
+  - {x: 7, y: 18}
+  - {x: 6, y: 18}
+  - {x: 5, y: 18}
+  _playerSpawnPosition: {x: 10, y: 16}
+  _hasPlayerSpawn: 1
+  _enemySpawns:
+  - <EnemyId>k__BackingField: 01
+    <SpawnPosition>k__BackingField: {x: 6, y: 12}
+    <InitialRotation>k__BackingField: 0
+    <PatrolPath>k__BackingField:
+    - <GridPosition>k__BackingField: {x: 10, y: 12}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 17, y: 12}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 17, y: 11}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 16, y: 10}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 17, y: 9}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 18, y: 10}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 19, y: 11}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 19, y: 13}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 19, y: 14}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 17, y: 15}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 14, y: 14}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 11, y: 14}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 10, y: 13}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 2, y: 13}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0
+    - <GridPosition>k__BackingField: {x: 1, y: 12}
+      <WaitDelay>k__BackingField: 0
+      <AnimatorParameterName>k__BackingField: 
+      <AnimatorParameterValue>k__BackingField: 0

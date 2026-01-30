@@ -12,7 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3038a7895d914e4f8967df55be6b944, type: 3}
   m_Name: LevelConfiguration
   m_EditorClassIdentifier: Assembly-CSharp::Game.LevelEditor.Data.LevelConfiguration
-  <PlayerPrefab>k__BackingField: {fileID: 0}
-  <WallMaterial>k__BackingField: {fileID: 0}
+  <PlayerPrefab>k__BackingField: {fileID: 9083156454595778573, guid: 3cc1b3def73e64377815bdb2b6089dad, type: 3}
+  <WallMaterial>k__BackingField: {fileID: 2100000, guid: c0ed509728d43460f9a579f83c3e0f1a, type: 2}
   <WallSize>k__BackingField: {x: 1, y: 2, z: 1}
-  _enemyPrefabs: []
+  _enemyPrefabs:
+  - <EnemyId>k__BackingField: 01
+    <Prefab>k__BackingField: {fileID: 5009071700233146085, guid: a389e4e04ad14472b9e1500b8e4cc695, type: 3}
