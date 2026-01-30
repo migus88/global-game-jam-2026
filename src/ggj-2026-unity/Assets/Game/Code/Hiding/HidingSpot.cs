@@ -22,7 +22,7 @@ namespace Game.Hiding
 
         private EventAggregator _eventAggregator;
         private HideConfiguration _configuration;
-        private Camera _mainCamera;
+        private UnityEngine.Camera _mainCamera;
         private GameObject _hintObject;
         private SpriteRenderer _hintRenderer;
 
@@ -39,7 +39,7 @@ namespace Game.Hiding
 
         private void Start()
         {
-            _mainCamera = Camera.main;
+            _mainCamera = UnityEngine.Camera.main;
             CreateHintDisplay();
 
             if (_hideActionReference != null && _hideActionReference.action != null)

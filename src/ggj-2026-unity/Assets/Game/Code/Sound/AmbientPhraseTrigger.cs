@@ -30,7 +30,7 @@ namespace Game.Sound
         private float _textDisplayDuration = 3f;
 
         private SoundManager _soundManager;
-        private Camera _mainCamera;
+        private UnityEngine.Camera _mainCamera;
         private GameObject _currentTextDisplay;
         private TextMeshPro _currentTextMesh;
         private CancellationTokenSource _cancellationTokenSource;
@@ -47,7 +47,7 @@ namespace Game.Sound
 
         private void Start()
         {
-            _mainCamera = Camera.main;
+            _mainCamera = UnityEngine.Camera.main;
             _cancellationTokenSource = new CancellationTokenSource();
 
             if (_textDisplayPrefab == null)
