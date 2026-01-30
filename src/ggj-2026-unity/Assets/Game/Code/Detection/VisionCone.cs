@@ -18,8 +18,8 @@ namespace Game.Detection
         [SerializeField] private bool _overrideSettings;
         [SerializeField] private float _viewDistance = 10f;
         [SerializeField, Range(10f, 180f)] private float _viewAngle = 60f;
-        [SerializeField] private LayerMask _obstacleLayerOverride;
-        [SerializeField] private LayerMask _targetLayerOverride;
+        [SerializeField] private LayerMask _obstacleLayerOverride = 1 << 6; // Layer 6 = Obstacle
+        [SerializeField] private LayerMask _targetLayerOverride = 1 << 3;   // Layer 3 = Player (adjust if different)
 
         private GameConfiguration _config;
         private VisionConeSettings _settings;

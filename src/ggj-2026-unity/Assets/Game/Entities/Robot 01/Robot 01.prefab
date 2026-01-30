@@ -48,6 +48,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7870d0d48ebbb4347a6e19dd9512351e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.LevelEditor.Runtime.EnemyPatrolController
+  _patrolWaypoints: []
   _patrolSpeed: 3
   _rotationSpeed: 180
   _overrideObservationSettings: 0
@@ -142,10 +143,10 @@ MonoBehaviour:
   _viewAngle: 40
   _obstacleLayerOverride:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   _targetLayerOverride:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 128
 --- !u!1001 &8787406305214008628
 PrefabInstance:
   m_ObjectHideFlags: 0
