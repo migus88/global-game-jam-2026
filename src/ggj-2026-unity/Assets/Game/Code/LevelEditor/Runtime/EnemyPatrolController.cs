@@ -10,7 +10,7 @@ namespace Game.LevelEditor.Runtime
     {
         [SerializeField] private float _moveSpeed = 3f;
         [SerializeField] private float _rotationSpeed = 180f;
-        [SerializeField] private float _arrivalThreshold = 0.1f;
+        [SerializeField] private float _smoothTurnRadius = 0.5f;
 
         private List<PatrolWaypoint> _patrolPath;
         private LevelData _levelData;
@@ -70,9 +70,17 @@ namespace Game.LevelEditor.Runtime
             while (!ct.IsCancellationRequested)
             {
                 var waypoint = _patrolPath[_currentWaypointIndex];
-                Vector3 targetPosition = _levelData.GridToWorld(waypoint.GridPosition);
+                int nextIndex = (_currentWaypointIndex + 1) % _patrolPath.Count;
+                var nextWaypoint = _patrolPath[nextIndex];
 
-                await MoveToPositionAsync(targetPosition, ct);
+                Vector3 targetPosition = _levelData.GridToWorld(waypoint.GridPosition);
+                Vector3 nextPosition = _levelData.GridToWorld(nextWaypoint.GridPosition);
+
+                bool hasDelay = waypoint.WaitDelay > 0f;
+                bool hasAnimatorAction = !string.IsNullOrEmpty(waypoint.AnimatorParameterName);
+                bool shouldStop = hasDelay || hasAnimatorAction;
+
+                await MoveToWaypointAsync(targetPosition, nextPosition, shouldStop, ct);
 
                 if (ct.IsCancellationRequested)
                 {
@@ -80,13 +88,13 @@ namespace Game.LevelEditor.Runtime
                 }
 
                 // Apply animator parameter if specified
-                if (_animator != null && !string.IsNullOrEmpty(waypoint.AnimatorParameterName))
+                if (_animator != null && hasAnimatorAction)
                 {
                     _animator.SetBool(waypoint.AnimatorParameterName, waypoint.AnimatorParameterValue);
                 }
 
                 // Wait at waypoint
-                if (waypoint.WaitDelay > 0f)
+                if (hasDelay)
                 {
                     await UniTask.Delay(
                         (int)(waypoint.WaitDelay * 1000),
@@ -100,39 +108,89 @@ namespace Game.LevelEditor.Runtime
                 }
 
                 // Move to next waypoint
-                _currentWaypointIndex = (_currentWaypointIndex + 1) % _patrolPath.Count;
+                _currentWaypointIndex = nextIndex;
             }
 
             _isPatrolling = false;
         }
 
-        private async UniTask MoveToPositionAsync(Vector3 targetPosition, CancellationToken ct)
+        private async UniTask MoveToWaypointAsync(Vector3 targetPosition, Vector3 nextPosition, bool shouldStop, CancellationToken ct)
         {
-            // First rotate towards target
-            await RotateTowardsAsync(targetPosition, ct);
+            Vector3 currentPos = transform.position;
+            Vector3 toTarget = targetPosition - currentPos;
+            toTarget.y = 0f;
+
+            // Rotate towards target first if we're far or stopped
+            if (toTarget.magnitude > _smoothTurnRadius * 2f)
+            {
+                await RotateTowardsAsync(targetPosition, ct);
+            }
 
             if (ct.IsCancellationRequested)
             {
                 return;
             }
 
-            // Then move to target
+            // Move towards waypoint
             while (!ct.IsCancellationRequested)
             {
-                Vector3 currentPos = transform.position;
+                currentPos = transform.position;
                 Vector3 direction = targetPosition - currentPos;
                 direction.y = 0f;
 
                 float distance = direction.magnitude;
-                if (distance <= _arrivalThreshold)
+
+                // If stopping at waypoint, come to a complete stop
+                if (shouldStop)
                 {
-                    transform.position = new Vector3(targetPosition.x, currentPos.y, targetPosition.z);
-                    break;
+                    if (distance <= 0.05f)
+                    {
+                        transform.position = new Vector3(targetPosition.x, currentPos.y, targetPosition.z);
+                        break;
+                    }
+                }
+                else
+                {
+                    // Smooth pass-through: start blending towards next waypoint when close
+                    if (distance <= _smoothTurnRadius)
+                    {
+                        // Blend direction towards next waypoint
+                        Vector3 toNext = nextPosition - targetPosition;
+                        toNext.y = 0f;
+
+                        if (toNext.sqrMagnitude > 0.01f)
+                        {
+                            float blendFactor = 1f - (distance / _smoothTurnRadius);
+                            Vector3 blendedTarget = Vector3.Lerp(targetPosition, nextPosition, blendFactor * 0.5f);
+                            direction = blendedTarget - currentPos;
+                            direction.y = 0f;
+                        }
+
+                        // Close enough to pass through
+                        if (distance <= 0.1f)
+                        {
+                            break;
+                        }
+                    }
                 }
 
-                Vector3 moveDirection = direction.normalized;
-                Vector3 newPosition = currentPos + moveDirection * (_moveSpeed * Time.deltaTime);
-                transform.position = newPosition;
+                // Move and rotate smoothly
+                if (direction.sqrMagnitude > 0.001f)
+                {
+                    Vector3 moveDirection = direction.normalized;
+
+                    // Smooth rotation while moving
+                    Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+                    transform.rotation = Quaternion.RotateTowards(
+                        transform.rotation,
+                        targetRotation,
+                        _rotationSpeed * Time.deltaTime
+                    );
+
+                    // Move forward
+                    Vector3 newPosition = currentPos + transform.forward * (_moveSpeed * Time.deltaTime);
+                    transform.position = newPosition;
+                }
 
                 await UniTask.Yield(ct);
             }

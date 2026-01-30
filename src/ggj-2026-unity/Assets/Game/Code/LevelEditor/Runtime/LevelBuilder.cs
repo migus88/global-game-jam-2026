@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.LevelEditor.Data;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using VContainer;
 using VContainer.Unity;
 
@@ -20,6 +22,7 @@ namespace Game.LevelEditor.Runtime
         private GameObject _playerInstance;
         private readonly List<GameObject> _wallInstances = new();
         private readonly List<GameObject> _enemyInstances = new();
+        private readonly List<AsyncOperationHandle<GameObject>> _loadHandles = new();
 
         [Inject]
         public LevelBuilder(IObjectResolver resolver, LevelConfiguration config)
@@ -35,7 +38,7 @@ namespace Game.LevelEditor.Runtime
 
             await SpawnWallsAsync(levelData);
             await SpawnEnemiesAsync(levelData);
-            SpawnPlayer(levelData);
+            await SpawnPlayerAsync(levelData);
         }
 
         public void ClearLevel()
@@ -45,6 +48,16 @@ namespace Game.LevelEditor.Runtime
                 Object.Destroy(_levelRoot.gameObject);
             }
 
+            // Release all addressable handles
+            foreach (var handle in _loadHandles)
+            {
+                if (handle.IsValid())
+                {
+                    Addressables.Release(handle);
+                }
+            }
+
+            _loadHandles.Clear();
             _wallInstances.Clear();
             _enemyInstances.Clear();
             _playerInstance = null;
@@ -61,12 +74,31 @@ namespace Game.LevelEditor.Runtime
 
         private async UniTask SpawnWallsAsync(LevelData levelData)
         {
+            if (_config.WallPrefab == null || !_config.WallPrefab.RuntimeKeyIsValid())
+            {
+                Debug.LogWarning("No wall prefab assigned in level configuration");
+                return;
+            }
+
+            // Load wall prefab once
+            var handle = _config.WallPrefab.LoadAssetAsync<GameObject>();
+            await handle.ToUniTask();
+
+            if (handle.Status != AsyncOperationStatus.Succeeded)
+            {
+                Debug.LogError("Failed to load wall prefab");
+                return;
+            }
+
+            _loadHandles.Add(handle);
+            var wallPrefab = handle.Result;
+
             int batchSize = 50;
             int count = 0;
 
             foreach (var wallPos in levelData.WallPositions)
             {
-                SpawnWall(levelData, wallPos);
+                SpawnWall(levelData, wallPos, wallPrefab);
                 count++;
 
                 if (count % batchSize == 0)
@@ -76,22 +108,15 @@ namespace Game.LevelEditor.Runtime
             }
         }
 
-        private void SpawnWall(LevelData levelData, Vector2Int gridPos)
+        private void SpawnWall(LevelData levelData, Vector2Int gridPos, GameObject wallPrefab)
         {
-            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            wall.name = $"Wall_{gridPos.x}_{gridPos.y}";
-            wall.layer = ObstacleLayer;
-
             Vector3 worldPos = levelData.GridToWorld(gridPos);
             worldPos.y = _config.WallSize.y * 0.5f;
-            wall.transform.position = worldPos;
-            wall.transform.localScale = _config.WallSize;
-            wall.transform.SetParent(_wallsContainer);
 
-            if (_config.WallMaterial != null)
-            {
-                wall.GetComponent<MeshRenderer>().sharedMaterial = _config.WallMaterial;
-            }
+            var wall = _resolver.Instantiate(wallPrefab, worldPos, Quaternion.identity, _wallsContainer);
+            wall.name = $"Wall_{gridPos.x}_{gridPos.y}";
+            wall.layer = ObstacleLayer;
+            wall.transform.localScale = _config.WallSize;
 
             _wallInstances.Add(wall);
         }
@@ -100,25 +125,35 @@ namespace Game.LevelEditor.Runtime
         {
             foreach (var enemyData in levelData.EnemySpawns)
             {
-                SpawnEnemy(levelData, enemyData);
-                await UniTask.Yield();
+                await SpawnEnemyAsync(levelData, enemyData);
             }
         }
 
-        private void SpawnEnemy(LevelData levelData, EnemySpawnData enemyData)
+        private async UniTask SpawnEnemyAsync(LevelData levelData, EnemySpawnData enemyData)
         {
-            var prefab = _config.GetEnemyPrefab(enemyData.EnemyId);
-            if (prefab == null)
+            if (enemyData.EnemyPrefab == null || !enemyData.EnemyPrefab.RuntimeKeyIsValid())
             {
-                Debug.LogWarning($"Cannot spawn enemy: prefab not found for ID '{enemyData.EnemyId}'");
+                Debug.LogWarning($"Enemy spawn at {enemyData.SpawnPosition} has no prefab assigned");
                 return;
             }
+
+            var handle = enemyData.EnemyPrefab.LoadAssetAsync<GameObject>();
+            await handle.ToUniTask();
+
+            if (handle.Status != AsyncOperationStatus.Succeeded)
+            {
+                Debug.LogError($"Failed to load enemy prefab at {enemyData.SpawnPosition}");
+                return;
+            }
+
+            _loadHandles.Add(handle);
+            var prefab = handle.Result;
 
             Vector3 worldPos = levelData.GridToWorld(enemyData.SpawnPosition);
             Quaternion rotation = Quaternion.Euler(0f, enemyData.InitialRotation, 0f);
 
             var enemy = _resolver.Instantiate(prefab, worldPos, rotation, _enemiesContainer);
-            enemy.name = $"Enemy_{enemyData.EnemyId}_{enemyData.SpawnPosition.x}_{enemyData.SpawnPosition.y}";
+            enemy.name = $"Enemy_{enemyData.SpawnPosition.x}_{enemyData.SpawnPosition.y}";
 
             // Setup patrol controller
             var patrolController = enemy.GetComponent<EnemyPatrolController>();
@@ -137,7 +172,7 @@ namespace Game.LevelEditor.Runtime
             _enemyInstances.Add(enemy);
         }
 
-        private void SpawnPlayer(LevelData levelData)
+        private async UniTask SpawnPlayerAsync(LevelData levelData)
         {
             if (!levelData.HasPlayerSpawn)
             {
@@ -145,14 +180,26 @@ namespace Game.LevelEditor.Runtime
                 return;
             }
 
-            if (_config.PlayerPrefab == null)
+            if (_config.PlayerPrefab == null || !_config.PlayerPrefab.RuntimeKeyIsValid())
             {
                 Debug.LogWarning("No player prefab assigned in level configuration");
                 return;
             }
 
+            var handle = _config.PlayerPrefab.LoadAssetAsync<GameObject>();
+            await handle.ToUniTask();
+
+            if (handle.Status != AsyncOperationStatus.Succeeded)
+            {
+                Debug.LogError("Failed to load player prefab");
+                return;
+            }
+
+            _loadHandles.Add(handle);
+            var prefab = handle.Result;
+
             Vector3 worldPos = levelData.GridToWorld(levelData.PlayerSpawnPosition);
-            _playerInstance = _resolver.Instantiate(_config.PlayerPrefab, worldPos, Quaternion.identity, _levelRoot);
+            _playerInstance = _resolver.Instantiate(prefab, worldPos, Quaternion.identity, _levelRoot);
             _playerInstance.name = "Player";
         }
     }

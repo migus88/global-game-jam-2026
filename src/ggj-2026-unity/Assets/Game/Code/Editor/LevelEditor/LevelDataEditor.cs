@@ -1,6 +1,7 @@
 using Game.LevelEditor.Data;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace Game.Editor.LevelEditor
 {
@@ -146,11 +147,31 @@ namespace Game.Editor.LevelEditor
             Handles.ConeHandleCap(0, worldPos + forward, rotation, 0.1f, EventType.Repaint);
 
             // Draw label
-            string label = string.IsNullOrEmpty(spawn.EnemyId) ? $"Enemy {index}" : spawn.EnemyId;
+            string label = GetAssetReferenceName(spawn.EnemyPrefab, index);
             Handles.Label(worldPos + Vector3.up * 0.3f, label);
 
             // Draw patrol path
             DrawPatrolPath(spawn, worldPos);
+        }
+
+        private static string GetAssetReferenceName(AssetReferenceGameObject assetRef, int index)
+        {
+            if (assetRef == null || !assetRef.RuntimeKeyIsValid())
+            {
+                return $"Enemy {index}";
+            }
+
+            var path = AssetDatabase.GUIDToAssetPath(assetRef.AssetGUID);
+            if (!string.IsNullOrEmpty(path))
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (asset != null)
+                {
+                    return asset.name;
+                }
+            }
+
+            return $"Enemy {index}";
         }
 
         private void DrawPatrolPath(EnemySpawnData spawn, Vector3 spawnWorldPos)

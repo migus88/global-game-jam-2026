@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace Game.LevelEditor.Data
 {
@@ -8,7 +9,7 @@ namespace Game.LevelEditor.Data
     public class EnemySpawnData
     {
         [field: SerializeField]
-        public string EnemyId { get; set; } = string.Empty;
+        public AssetReferenceGameObject EnemyPrefab { get; set; }
 
         [field: SerializeField]
         public Vector2Int SpawnPosition { get; set; }
@@ -23,9 +24,8 @@ namespace Game.LevelEditor.Data
         {
         }
 
-        public EnemySpawnData(string enemyId, Vector2Int spawnPosition)
+        public EnemySpawnData(Vector2Int spawnPosition)
         {
-            EnemyId = enemyId;
             SpawnPosition = spawnPosition;
         }
 

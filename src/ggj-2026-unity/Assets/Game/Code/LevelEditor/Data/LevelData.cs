@@ -113,14 +113,14 @@ namespace Game.LevelEditor.Data
             MarkDirty();
         }
 
-        public EnemySpawnData AddEnemySpawn(string enemyId, Vector2Int gridPos)
+        public EnemySpawnData AddEnemySpawn(Vector2Int gridPos)
         {
             if (!IsValidGridPosition(gridPos))
             {
                 return null;
             }
 
-            var spawn = new EnemySpawnData(enemyId, gridPos);
+            var spawn = new EnemySpawnData(gridPos);
             _enemySpawns.Add(spawn);
             MarkDirty();
             return spawn;

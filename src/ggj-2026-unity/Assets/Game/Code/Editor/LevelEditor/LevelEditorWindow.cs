@@ -1,8 +1,8 @@
-using System.Collections.Generic;
 using Game.LevelEditor.Data;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace Game.Editor.LevelEditor
 {
@@ -29,7 +29,6 @@ namespace Game.Editor.LevelEditor
         private static readonly Color HoverColor = new(1f, 1f, 1f, 0.3f);
 
         [SerializeField] private LevelData _levelData;
-        [SerializeField] private string _enemyIdToPlace = "default";
 
         private EditorTool _currentTool = EditorTool.None;
         private int _selectedEnemyIndex = -1;
@@ -375,14 +374,6 @@ namespace Game.Editor.LevelEditor
 
             EditorGUILayout.Space(10f);
 
-            // Enemy placement settings
-            if (_currentTool == EditorTool.PlaceEnemy)
-            {
-                EditorGUILayout.LabelField("Enemy Settings", EditorStyles.boldLabel);
-                _enemyIdToPlace = EditorGUILayout.TextField("Enemy ID", _enemyIdToPlace);
-                EditorGUILayout.Space(10f);
-            }
-
             // Enemy list
             EditorGUILayout.LabelField("Enemies", EditorStyles.boldLabel);
 
@@ -393,10 +384,18 @@ namespace Game.Editor.LevelEditor
 
                 EditorGUILayout.BeginHorizontal();
 
-                if (GUILayout.Toggle(isSelected, $"{i}: {spawn.EnemyId}", EditorStyles.miniButton))
+                string prefabName = GetAssetReferenceName(spawn.EnemyPrefab);
+                bool clicked = GUILayout.Toggle(isSelected, $"{i}: {prefabName}", EditorStyles.miniButton);
+
+                // Only change selection if toggle state changed
+                if (clicked && !isSelected)
                 {
                     _selectedEnemyIndex = i;
-                    _currentTool = EditorTool.EditPatrol;
+                    RebuildWaypointList();
+                }
+                else if (!clicked && isSelected)
+                {
+                    _selectedEnemyIndex = -1;
                     RebuildWaypointList();
                 }
 
@@ -432,8 +431,18 @@ namespace Game.Editor.LevelEditor
         {
             var spawn = _levelData.EnemySpawns[_selectedEnemyIndex];
 
-            EditorGUILayout.LabelField("Patrol Path", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("Click on grid to add waypoints while Patrol tool is active", MessageType.Info);
+            EditorGUILayout.LabelField("Selected Enemy", EditorStyles.boldLabel);
+
+            // Enemy prefab reference
+            EditorGUI.BeginChangeCheck();
+            var prefabObj = GetAssetReferenceObject(spawn.EnemyPrefab);
+            var newPrefabObj = EditorGUILayout.ObjectField("Enemy Prefab", prefabObj, typeof(GameObject), false);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(_levelData, "Change Enemy Prefab");
+                SetAssetReferenceFromObject(spawn, newPrefabObj as GameObject);
+                EditorUtility.SetDirty(_levelData);
+            }
 
             EditorGUI.BeginChangeCheck();
             var rotation = EditorGUILayout.Slider("Initial Rotation", spawn.InitialRotation, 0f, 360f);
@@ -443,6 +452,10 @@ namespace Game.Editor.LevelEditor
                 spawn.InitialRotation = rotation;
                 EditorUtility.SetDirty(_levelData);
             }
+
+            EditorGUILayout.Space(10f);
+            EditorGUILayout.LabelField("Patrol Path", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox("Select Patrol tool and click on grid to add waypoints", MessageType.Info);
 
             EditorGUILayout.Space(5f);
 
@@ -459,6 +472,62 @@ namespace Game.Editor.LevelEditor
                 spawn.ClearPatrolPath();
                 RebuildWaypointList();
             }
+        }
+
+        private static string GetAssetReferenceName(AssetReferenceGameObject assetRef)
+        {
+            if (assetRef == null || !assetRef.RuntimeKeyIsValid())
+            {
+                return "(None)";
+            }
+
+#if UNITY_EDITOR
+            var path = AssetDatabase.GUIDToAssetPath(assetRef.AssetGUID);
+            if (!string.IsNullOrEmpty(path))
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (asset != null)
+                {
+                    return asset.name;
+                }
+            }
+#endif
+            return assetRef.AssetGUID;
+        }
+
+        private static GameObject GetAssetReferenceObject(AssetReferenceGameObject assetRef)
+        {
+            if (assetRef == null || !assetRef.RuntimeKeyIsValid())
+            {
+                return null;
+            }
+
+#if UNITY_EDITOR
+            var path = AssetDatabase.GUIDToAssetPath(assetRef.AssetGUID);
+            if (!string.IsNullOrEmpty(path))
+            {
+                return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            }
+#endif
+            return null;
+        }
+
+        private static void SetAssetReferenceFromObject(EnemySpawnData spawn, GameObject prefab)
+        {
+            if (prefab == null)
+            {
+                spawn.EnemyPrefab = null;
+                return;
+            }
+
+#if UNITY_EDITOR
+            var path = AssetDatabase.GetAssetPath(prefab);
+            if (!string.IsNullOrEmpty(path))
+            {
+                var guid = AssetDatabase.AssetPathToGUID(path);
+                spawn.EnemyPrefab = new AssetReferenceGameObject(guid);
+            }
+#endif
         }
 
         private void RebuildWaypointList()
@@ -658,7 +727,7 @@ namespace Game.Editor.LevelEditor
 
                 case EditorTool.PlaceEnemy:
                     Undo.RecordObject(_levelData, "Place Enemy Spawn");
-                    var spawn = _levelData.AddEnemySpawn(_enemyIdToPlace, gridPos);
+                    var spawn = _levelData.AddEnemySpawn(gridPos);
                     if (spawn != null)
                     {
                         _selectedEnemyIndex = _levelData.EnemySpawns.Count - 1;
