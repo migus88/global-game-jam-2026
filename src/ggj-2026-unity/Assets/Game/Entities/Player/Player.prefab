@@ -48,6 +48,7 @@ GameObject:
   - component: {fileID: 5311973665488613118}
   - component: {fileID: 2886762066318461919}
   - component: {fileID: 1972777329798863682}
+  - component: {fileID: 1972777329798863683}
   m_Layer: 7
   m_Name: Player
   m_TagString: Player
@@ -307,10 +308,23 @@ MonoBehaviour:
   m_GameObject: {fileID: 9083156454595778573}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8cd6cd10ba09f4c5cbae5dd96a643586, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Game.GameState.PausableInputHandler
+  m_Script: {fileID: 11500000, guid: f024033801e6742d78d89fe99fed35a5, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Game.GameState.LockablePlayerInput
   _playerInput: {fileID: 7027705425608581828}
+--- !u!114 &1972777329798863683
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9083156454595778573}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15c26ea9294154d38978bf86c45b0cf1, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::Game.GameState.LockablePlayerMovement
+  _movementController: {fileID: 4031514492260303535}
 --- !u!1001 &7398789013488092493
 PrefabInstance:
   m_ObjectHideFlags: 0

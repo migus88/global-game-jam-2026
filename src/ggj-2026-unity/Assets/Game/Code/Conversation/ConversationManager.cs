@@ -194,6 +194,10 @@ namespace Game.Conversation
             }
             else
             {
+                // Keep cursor visible for game over UI
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+
                 _eventAggregator?.Publish(new GameOverEvent("You were caught!"));
                 // Keep lock active on game over
             }

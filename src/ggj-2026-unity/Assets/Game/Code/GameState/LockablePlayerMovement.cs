@@ -1,4 +1,5 @@
 using Migs.MLock.Interfaces;
+using StarterAssets;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -26,7 +27,12 @@ namespace Game.GameState
 
             if (_movementController == null)
             {
-                _movementController = GetComponent<MonoBehaviour>();
+                _movementController = GetComponent<ThirdPersonController>();
+            }
+
+            if (_movementController == null)
+            {
+                Debug.LogWarning("[LockablePlayerMovement] No movement controller found!");
             }
 
             _lockService?.Subscribe(this);

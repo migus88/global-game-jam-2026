@@ -1,4 +1,5 @@
 using Migs.MLock.Interfaces;
+using StarterAssets;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using VContainer;
@@ -12,6 +13,7 @@ namespace Game.GameState
         private PlayerInput _playerInput;
 
         private GameLockService _lockService;
+        private StarterAssetsInputs _starterInputs;
 
         public GameLockTags LockTags => GameLockTags.PlayerInput;
 
@@ -29,6 +31,8 @@ namespace Game.GameState
             {
                 _playerInput = GetComponent<PlayerInput>();
             }
+
+            _starterInputs = GetComponent<StarterAssetsInputs>();
 
             _lockService?.Subscribe(this);
         }
@@ -53,6 +57,12 @@ namespace Game.GameState
         private void OnDestroy()
         {
             _lockService?.Unsubscribe(this);
+
+            // Re-enable input on destroy to prevent errors when exiting play mode
+            if (_playerInput != null && !_playerInput.inputIsActive)
+            {
+                _playerInput.ActivateInput();
+            }
         }
 
         public void HandleLocking()
@@ -61,6 +71,8 @@ namespace Game.GameState
             {
                 _playerInput.DeactivateInput();
             }
+
+            ResetInputValues();
         }
 
         public void HandleUnlocking()
@@ -69,6 +81,19 @@ namespace Game.GameState
             {
                 _playerInput.ActivateInput();
             }
+        }
+
+        private void ResetInputValues()
+        {
+            if (_starterInputs == null)
+            {
+                return;
+            }
+
+            _starterInputs.move = Vector2.zero;
+            _starterInputs.look = Vector2.zero;
+            _starterInputs.jump = false;
+            _starterInputs.sprint = false;
         }
     }
 }

@@ -155,8 +155,13 @@ namespace Game.AI
         {
             _isLocked = false;
 
-            // Reset from alert state after conversation
-            if (_currentState == EnemyState.Alert && !_isIgnoringPlayer)
+            // Reset detection state
+            _wasDetecting = false;
+            _isSearchScanning = false;
+            _isRotatingBeforeFollow = false;
+
+            // Always return to patrol after conversation
+            if (_currentState == EnemyState.Alert || _isIgnoringPlayer)
             {
                 SetState(EnemyState.Patrol);
                 _patrolController?.StartPatrol();
@@ -185,6 +190,8 @@ namespace Game.AI
         private void StartIgnoringPlayer()
         {
             _isIgnoringPlayer = true;
+            _wasDetecting = false;
+            _currentState = EnemyState.Patrol;
 
             if (_visionCone != null)
             {
