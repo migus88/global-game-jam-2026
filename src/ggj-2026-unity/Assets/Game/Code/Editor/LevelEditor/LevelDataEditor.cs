@@ -15,6 +15,7 @@ namespace Game.Editor.LevelEditor
         private static readonly Color PatrolPathColor = new(1f, 0.8f, 0.2f, 0.8f);
         private static readonly Color PatrolPathBlockedColor = new(1f, 0f, 0f, 1f);
         private static readonly Color WaypointColor = new(1f, 0.6f, 0f, 0.9f);
+        private static readonly Color ObservationWaypointColor = new(0.3f, 0.8f, 1f, 0.9f);
 
         public static int SelectedEnemyIndex { get; set; } = -1;
 
@@ -209,11 +210,28 @@ namespace Game.Editor.LevelEditor
                 }
 
                 // Draw waypoint marker
-                Handles.color = WaypointColor;
+                bool isObservation = waypoint.IsObservation;
+                Handles.color = isObservation ? ObservationWaypointColor : WaypointColor;
                 Handles.DrawSolidDisc(waypointPos, Vector3.up, _levelData.CellSize * 0.15f);
 
+                // Draw observation indicator (eye icon substitute - a diamond shape)
+                if (isObservation)
+                {
+                    Handles.color = Color.white;
+                    float size = _levelData.CellSize * 0.1f;
+                    Vector3[] diamond =
+                    {
+                        waypointPos + Vector3.forward * size,
+                        waypointPos + Vector3.right * size * 0.5f,
+                        waypointPos - Vector3.forward * size,
+                        waypointPos - Vector3.right * size * 0.5f
+                    };
+                    Handles.DrawAAConvexPolygon(diamond);
+                }
+
                 // Draw waypoint index
-                Handles.Label(waypointPos + Vector3.up * 0.2f, $"{i + 1}");
+                string label = isObservation ? $"{i + 1} [OBS]" : $"{i + 1}";
+                Handles.Label(waypointPos + Vector3.up * 0.2f, label);
 
                 // Draw delay label if present
                 if (waypoint.WaitDelay > 0f)

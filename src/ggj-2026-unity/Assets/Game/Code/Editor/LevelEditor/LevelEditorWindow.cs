@@ -43,7 +43,7 @@ namespace Game.Editor.LevelEditor
 
         private const float MinZoom = 5f;
         private const float MaxZoom = 50f;
-        private const float SidebarWidth = 280f;
+        private const float SidebarWidth = 340f;
         private const float ToolbarHeight = 25f;
 
         [MenuItem("Game/Level Editor")]
@@ -564,23 +564,32 @@ namespace Game.Editor.LevelEditor
 
                     var waypoint = spawn.PatrolPath[index];
                     float lineHeight = EditorGUIUtility.singleLineHeight;
-                    float spacing = 2f;
+                    float spacing = 4f;
+                    float y = rect.y;
+                    float labelWidth = 75f;
+                    float fieldWidth = rect.width - labelWidth;
 
-                    // Position
-                    Rect posRect = new(rect.x, rect.y, rect.width, lineHeight);
+                    // Row 1: Position
+                    EditorGUI.LabelField(new Rect(rect.x, y, labelWidth, lineHeight), $"#{index + 1} Pos");
+                    float posFieldWidth = (fieldWidth - 20f) * 0.5f;
+
                     EditorGUI.BeginChangeCheck();
-                    var pos = EditorGUI.Vector2IntField(posRect, $"#{index + 1} Position", waypoint.GridPosition);
+                    EditorGUI.LabelField(new Rect(rect.x + labelWidth, y, 15f, lineHeight), "X");
+                    int posX = EditorGUI.IntField(new Rect(rect.x + labelWidth + 15f, y, posFieldWidth - 15f, lineHeight), waypoint.GridPosition.x);
+                    EditorGUI.LabelField(new Rect(rect.x + labelWidth + posFieldWidth + 5f, y, 15f, lineHeight), "Y");
+                    int posY = EditorGUI.IntField(new Rect(rect.x + labelWidth + posFieldWidth + 20f, y, posFieldWidth - 15f, lineHeight), waypoint.GridPosition.y);
                     if (EditorGUI.EndChangeCheck())
                     {
                         Undo.RecordObject(_levelData, "Change Waypoint Position");
-                        waypoint.GridPosition = pos;
+                        waypoint.GridPosition = new Vector2Int(posX, posY);
                         EditorUtility.SetDirty(_levelData);
                     }
+                    y += lineHeight + spacing;
 
-                    // Delay
-                    Rect delayRect = new(rect.x, rect.y + lineHeight + spacing, rect.width * 0.5f - 5f, lineHeight);
+                    // Row 2: Delay and Observation
+                    EditorGUI.LabelField(new Rect(rect.x, y, labelWidth, lineHeight), "Delay");
                     EditorGUI.BeginChangeCheck();
-                    var delay = EditorGUI.FloatField(delayRect, "Delay", waypoint.WaitDelay);
+                    var delay = EditorGUI.FloatField(new Rect(rect.x + labelWidth, y, 60f, lineHeight), waypoint.WaitDelay);
                     if (EditorGUI.EndChangeCheck())
                     {
                         Undo.RecordObject(_levelData, "Change Waypoint Delay");
@@ -588,10 +597,20 @@ namespace Game.Editor.LevelEditor
                         EditorUtility.SetDirty(_levelData);
                     }
 
-                    // Animator param name
-                    Rect paramRect = new(rect.x, rect.y + (lineHeight + spacing) * 2f, rect.width * 0.6f - 5f, lineHeight);
                     EditorGUI.BeginChangeCheck();
-                    var paramName = EditorGUI.TextField(paramRect, "Anim Param", waypoint.AnimatorParameterName);
+                    var isObs = EditorGUI.ToggleLeft(new Rect(rect.x + labelWidth + 70f, y, fieldWidth - 70f, lineHeight), "Observe", waypoint.IsObservation);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        Undo.RecordObject(_levelData, "Change Waypoint Observation");
+                        waypoint.IsObservation = isObs;
+                        EditorUtility.SetDirty(_levelData);
+                    }
+                    y += lineHeight + spacing;
+
+                    // Row 3: Animator param
+                    EditorGUI.LabelField(new Rect(rect.x, y, labelWidth, lineHeight), "Anim Param");
+                    EditorGUI.BeginChangeCheck();
+                    var paramName = EditorGUI.TextField(new Rect(rect.x + labelWidth, y, fieldWidth - 50f, lineHeight), waypoint.AnimatorParameterName);
                     if (EditorGUI.EndChangeCheck())
                     {
                         Undo.RecordObject(_levelData, "Change Waypoint Animator Param");
@@ -599,10 +618,8 @@ namespace Game.Editor.LevelEditor
                         EditorUtility.SetDirty(_levelData);
                     }
 
-                    // Animator param value
-                    Rect valueRect = new(rect.x + rect.width * 0.6f, rect.y + (lineHeight + spacing) * 2f, rect.width * 0.4f, lineHeight);
                     EditorGUI.BeginChangeCheck();
-                    var paramValue = EditorGUI.Toggle(valueRect, "Value", waypoint.AnimatorParameterValue);
+                    var paramValue = EditorGUI.Toggle(new Rect(rect.x + rect.width - 40f, y, 40f, lineHeight), waypoint.AnimatorParameterValue);
                     if (EditorGUI.EndChangeCheck())
                     {
                         Undo.RecordObject(_levelData, "Change Waypoint Animator Value");
@@ -610,7 +627,7 @@ namespace Game.Editor.LevelEditor
                         EditorUtility.SetDirty(_levelData);
                     }
                 },
-                elementHeightCallback = _ => EditorGUIUtility.singleLineHeight * 3f + 8f,
+                elementHeightCallback = _ => EditorGUIUtility.singleLineHeight * 3f + 12f,
                 onRemoveCallback = list =>
                 {
                     Undo.RecordObject(_levelData, "Remove Waypoint");

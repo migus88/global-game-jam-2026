@@ -215,7 +215,8 @@ MonoBehaviour:
     _initialRotation: 0
     _patrolPath:
     - <GridPosition>k__BackingField: {x: 6, y: 12}
-      <WaitDelay>k__BackingField: 0
+      <WaitDelay>k__BackingField: 5
+      <IsObservation>k__BackingField: 1
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
   - _enemyPrefab:
@@ -228,7 +229,8 @@ MonoBehaviour:
     _initialRotation: 0
     _patrolPath:
     - <GridPosition>k__BackingField: {x: 11, y: 12}
-      <WaitDelay>k__BackingField: 0
+      <WaitDelay>k__BackingField: 3
+      <IsObservation>k__BackingField: 1
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
   - _enemyPrefab:
@@ -242,26 +244,32 @@ MonoBehaviour:
     _patrolPath:
     - <GridPosition>k__BackingField: {x: 9, y: 6}
       <WaitDelay>k__BackingField: 0
+      <IsObservation>k__BackingField: 0
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
     - <GridPosition>k__BackingField: {x: 9, y: 4}
       <WaitDelay>k__BackingField: 0
+      <IsObservation>k__BackingField: 0
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
     - <GridPosition>k__BackingField: {x: 9, y: 2}
       <WaitDelay>k__BackingField: 0
+      <IsObservation>k__BackingField: 0
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
     - <GridPosition>k__BackingField: {x: 7, y: 2}
       <WaitDelay>k__BackingField: 0
+      <IsObservation>k__BackingField: 0
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
     - <GridPosition>k__BackingField: {x: 5, y: 2}
       <WaitDelay>k__BackingField: 0
+      <IsObservation>k__BackingField: 0
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
     - <GridPosition>k__BackingField: {x: 7, y: 4}
       <WaitDelay>k__BackingField: 0
+      <IsObservation>k__BackingField: 0
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
   - _enemyPrefab:
@@ -274,22 +282,27 @@ MonoBehaviour:
     _initialRotation: 0
     _patrolPath:
     - <GridPosition>k__BackingField: {x: 17, y: 6}
-      <WaitDelay>k__BackingField: 0
+      <WaitDelay>k__BackingField: 3
+      <IsObservation>k__BackingField: 1
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
     - <GridPosition>k__BackingField: {x: 14, y: 3}
       <WaitDelay>k__BackingField: 0
+      <IsObservation>k__BackingField: 0
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
     - <GridPosition>k__BackingField: {x: 16, y: 4}
-      <WaitDelay>k__BackingField: 0
+      <WaitDelay>k__BackingField: 5
+      <IsObservation>k__BackingField: 1
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
     - <GridPosition>k__BackingField: {x: 14, y: 4}
       <WaitDelay>k__BackingField: 0
+      <IsObservation>k__BackingField: 1
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0
     - <GridPosition>k__BackingField: {x: 16, y: 6}
-      <WaitDelay>k__BackingField: 0
+      <WaitDelay>k__BackingField: 4
+      <IsObservation>k__BackingField: 1
       <AnimatorParameterName>k__BackingField: 
       <AnimatorParameterValue>k__BackingField: 0

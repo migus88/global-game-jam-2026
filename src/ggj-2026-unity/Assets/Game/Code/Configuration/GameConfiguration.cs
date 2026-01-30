@@ -8,6 +8,22 @@ namespace Game.Configuration
     {
         [field: SerializeField]
         public VisionConeSettings VisionCone { get; private set; } = new();
+
+        [field: SerializeField]
+        public ObservationSettings Observation { get; private set; } = new();
+    }
+
+    [Serializable]
+    public class ObservationSettings
+    {
+        [field: SerializeField, Range(30f, 180f), Tooltip("Total angle to scan left and right")]
+        public float ScanAngle { get; private set; } = 120f;
+
+        [field: SerializeField, Tooltip("Speed of the scanning rotation in degrees per second")]
+        public float ScanSpeed { get; private set; } = 90f;
+
+        [field: SerializeField, Tooltip("Pause duration at each end of the scan")]
+        public float PauseAtEnds { get; private set; } = 0.3f;
     }
 
     [Serializable]

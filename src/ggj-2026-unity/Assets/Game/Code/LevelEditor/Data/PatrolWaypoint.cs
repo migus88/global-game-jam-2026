@@ -13,6 +13,9 @@ namespace Game.LevelEditor.Data
         public float WaitDelay { get; set; }
 
         [field: SerializeField]
+        public bool IsObservation { get; set; }
+
+        [field: SerializeField]
         public string AnimatorParameterName { get; set; } = string.Empty;
 
         [field: SerializeField]

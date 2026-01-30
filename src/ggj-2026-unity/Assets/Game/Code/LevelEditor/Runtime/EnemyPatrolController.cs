@@ -1,19 +1,31 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Game.Configuration;
 using Game.LevelEditor.Data;
 using UnityEngine;
+using VContainer;
 
 namespace Game.LevelEditor.Runtime
 {
     [RequireComponent(typeof(CharacterController))]
     public class EnemyPatrolController : MonoBehaviour
     {
+        private static readonly int IsWalkingHash = Animator.StringToHash("IsWalking");
+
+        [Header("Movement")]
         [SerializeField] private float _moveSpeed = 3f;
         [SerializeField] private float _rotationSpeed = 180f;
         [SerializeField] private float _smoothTurnRadius = 0.5f;
         [SerializeField] private float _gravity = -9.81f;
 
+        [Header("Observation Override")]
+        [SerializeField] private bool _overrideObservationSettings;
+        [SerializeField, Range(30f, 180f)] private float _scanAngle = 120f;
+        [SerializeField] private float _scanSpeed = 90f;
+        [SerializeField] private float _pauseAtEnds = 0.3f;
+
+        private GameConfiguration _config;
         private List<PatrolWaypoint> _patrolPath;
         private LevelData _levelData;
         private Vector3 _spawnPosition;
@@ -24,9 +36,20 @@ namespace Game.LevelEditor.Runtime
         private bool _isPatrolling;
         private bool _movingForward = true;
         private float _verticalVelocity;
+        private bool _isWalking;
 
         public bool IsPatrolling => _isPatrolling;
         public int CurrentWaypointIndex => _currentWaypointIndex;
+
+        private float ScanAngle => _overrideObservationSettings ? _scanAngle : (_config?.Observation?.ScanAngle ?? 120f);
+        private float ScanSpeed => _overrideObservationSettings ? _scanSpeed : (_config?.Observation?.ScanSpeed ?? 90f);
+        private float PauseAtEnds => _overrideObservationSettings ? _pauseAtEnds : (_config?.Observation?.PauseAtEnds ?? 0.3f);
+
+        [Inject]
+        public void Construct(GameConfiguration config)
+        {
+            _config = config;
+        }
 
         private void Awake()
         {
@@ -63,6 +86,21 @@ namespace Game.LevelEditor.Runtime
             }
 
             _isPatrolling = false;
+            SetWalking(false);
+        }
+
+        private void SetWalking(bool walking)
+        {
+            if (_isWalking == walking)
+            {
+                return;
+            }
+
+            _isWalking = walking;
+            if (_animator != null)
+            {
+                _animator.SetBool(IsWalkingHash, walking);
+            }
         }
 
         private List<Vector3> BuildFullPath()
@@ -143,11 +181,12 @@ namespace Game.LevelEditor.Runtime
 
                 Vector3 targetPosition = fullPath[nextIndex];
 
-                // Get waypoint data for delay/animator (only waypoints have this, not spawn)
+                // Get waypoint data for delay/animator/observation (only waypoints have this, not spawn)
                 var waypointData = GetWaypointData(nextIndex);
                 bool hasDelay = waypointData?.WaitDelay > 0f;
                 bool hasAnimatorAction = !string.IsNullOrEmpty(waypointData?.AnimatorParameterName);
-                bool shouldStop = hasDelay || hasAnimatorAction;
+                bool isObservation = waypointData?.IsObservation ?? false;
+                bool shouldStop = hasDelay || hasAnimatorAction || isObservation;
 
                 // Determine next-next position for smooth blending
                 int nextNextIndex = _movingForward ? nextIndex + 1 : nextIndex - 1;
@@ -167,8 +206,13 @@ namespace Game.LevelEditor.Runtime
                     _animator.SetBool(waypointData.AnimatorParameterName, waypointData.AnimatorParameterValue);
                 }
 
-                // Wait at waypoint
-                if (hasDelay)
+                // Perform observation if this is an observation waypoint
+                if (isObservation)
+                {
+                    await PerformObservationAsync(waypointData.WaitDelay, ct);
+                }
+                // Regular wait at waypoint
+                else if (hasDelay)
                 {
                     await UniTask.Delay(
                         (int)(waypointData.WaitDelay * 1000),
@@ -190,6 +234,67 @@ namespace Game.LevelEditor.Runtime
             _isPatrolling = false;
         }
 
+        private async UniTask PerformObservationAsync(float duration, CancellationToken ct)
+        {
+            SetWalking(false);
+
+            float halfAngle = ScanAngle * 0.5f;
+            Quaternion startRotation = transform.rotation;
+            Quaternion leftRotation = startRotation * Quaternion.Euler(0f, -halfAngle, 0f);
+            Quaternion rightRotation = startRotation * Quaternion.Euler(0f, halfAngle, 0f);
+
+            float elapsed = 0f;
+
+            // If duration is 0, do one full scan cycle
+            float minDuration = (ScanAngle / ScanSpeed) * 2f + PauseAtEnds * 2f;
+            float actualDuration = Mathf.Max(duration, minDuration);
+
+            while (elapsed < actualDuration && !ct.IsCancellationRequested)
+            {
+                // Look left
+                await RotateToAsync(leftRotation, ct);
+                if (ct.IsCancellationRequested) break;
+
+                // Pause at left
+                await UniTask.Delay((int)(PauseAtEnds * 1000), cancellationToken: ct);
+                if (ct.IsCancellationRequested) break;
+
+                // Look right
+                await RotateToAsync(rightRotation, ct);
+                if (ct.IsCancellationRequested) break;
+
+                // Pause at right
+                await UniTask.Delay((int)(PauseAtEnds * 1000), cancellationToken: ct);
+                if (ct.IsCancellationRequested) break;
+
+                elapsed += (ScanAngle / ScanSpeed) * 2f + PauseAtEnds * 2f;
+            }
+
+            // Return to forward direction
+            await RotateToAsync(startRotation, ct);
+        }
+
+        private async UniTask RotateToAsync(Quaternion targetRotation, CancellationToken ct)
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                float angle = Quaternion.Angle(transform.rotation, targetRotation);
+                if (angle < 1f)
+                {
+                    transform.rotation = targetRotation;
+                    break;
+                }
+
+                transform.rotation = Quaternion.RotateTowards(
+                    transform.rotation,
+                    targetRotation,
+                    ScanSpeed * Time.deltaTime
+                );
+
+                await UniTask.Yield(ct);
+            }
+        }
+
         private async UniTask MoveToWaypointAsync(Vector3 targetPosition, Vector3 nextPosition, bool shouldStop, CancellationToken ct)
         {
             Vector3 currentPos = transform.position;
@@ -207,6 +312,8 @@ namespace Game.LevelEditor.Runtime
                 return;
             }
 
+            SetWalking(true);
+
             // Move towards waypoint
             while (!ct.IsCancellationRequested)
             {
@@ -221,6 +328,7 @@ namespace Game.LevelEditor.Runtime
                 {
                     if (distance <= 0.05f)
                     {
+                        SetWalking(false);
                         break;
                     }
                 }
@@ -279,6 +387,7 @@ namespace Game.LevelEditor.Runtime
                 else
                 {
                     // Direction is zero, we're at the target
+                    SetWalking(false);
                     break;
                 }
 
