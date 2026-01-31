@@ -2,6 +2,7 @@ using Game.Events;
 using Game.Scenes.Events;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using VContainer;
 using VContainer.Unity;
@@ -22,6 +23,9 @@ namespace Game.Scenes
         [SerializeField]
         private Selectable _creditsCloseButton;
 
+        [SerializeField]
+        private InputActionReference _cancelAction;
+
         private EventAggregator _eventAggregator;
 
         [Inject]
@@ -35,6 +39,31 @@ namespace Game.Scenes
             ResolveDependenciesIfNeeded();
 
             ShowMenu();
+        }
+
+        private void OnEnable()
+        {
+            if (_cancelAction != null)
+            {
+                _cancelAction.action.Enable();
+                _cancelAction.action.performed += OnCancelPerformed;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (_cancelAction != null)
+            {
+                _cancelAction.action.performed -= OnCancelPerformed;
+            }
+        }
+
+        private void OnCancelPerformed(InputAction.CallbackContext context)
+        {
+            if (_creditsContainer != null && _creditsContainer.activeSelf)
+            {
+                OnCreditsCloseButtonClicked();
+            }
         }
 
         private void ResolveDependenciesIfNeeded()
@@ -70,6 +99,7 @@ namespace Game.Scenes
 
         public void OnCreditsButtonClicked()
         {
+            _menuContainer?.SetActive(false);
             _creditsContainer?.SetActive(true);
 
             if (_creditsCloseButton != null)
@@ -81,6 +111,7 @@ namespace Game.Scenes
         public void OnCreditsCloseButtonClicked()
         {
             _creditsContainer?.SetActive(false);
+            _menuContainer?.SetActive(true);
             SelectFirstButton();
         }
 

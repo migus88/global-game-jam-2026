@@ -483,6 +483,7 @@ RectTransform:
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 2008970497}
   - {fileID: 1528468483}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -506,7 +507,8 @@ MonoBehaviour:
   _menuContainer: {fileID: 1528468482}
   _firstSelected: {fileID: 1935717082}
   _creditsContainer: {fileID: 2008970496}
-  _creditsCloseButton: {fileID: 0}
+  _creditsCloseButton: {fileID: 58928011}
+  _cancelAction: {fileID: 0}
 --- !u!1 &95534052
 GameObject:
   m_ObjectHideFlags: 0
@@ -746,6 +748,7 @@ MonoBehaviour:
   autoRun: 1
   autoInjectGameObjects:
   - {fileID: 88451202}
+  - {fileID: 2008970496}
 --- !u!4 &228940048
 Transform:
   m_ObjectHideFlags: 0
@@ -937,7 +940,6 @@ RectTransform:
   m_Children:
   - {fileID: 95534053}
   - {fileID: 585164232}
-  - {fileID: 2008970497}
   m_Father: {fileID: 88451206}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -1417,13 +1419,13 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2008970496}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 58928010}
-  m_Father: {fileID: 1528468483}
+  m_Father: {fileID: 88451206}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
