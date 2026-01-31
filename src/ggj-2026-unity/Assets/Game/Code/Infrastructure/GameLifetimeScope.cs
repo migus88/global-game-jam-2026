@@ -4,6 +4,7 @@ using Game.Events;
 using Game.GameState;
 using Game.Hiding;
 using Game.LevelEditor.Data;
+using Game.Scenes;
 using Game.Sound;
 using UnityEngine;
 using VContainer;
@@ -16,6 +17,7 @@ public class GameLifetimeScope : LifetimeScope
     [SerializeField] private SoundConfiguration _soundConfiguration;
     [SerializeField] private HideConfiguration _hideConfiguration;
     [SerializeField] private ConversationConfiguration _conversationConfiguration;
+    [SerializeField] private SceneConfiguration _sceneConfiguration;
 
     protected override void Configure(IContainerBuilder builder)
     {
@@ -44,6 +46,13 @@ public class GameLifetimeScope : LifetimeScope
         if (_conversationConfiguration != null)
         {
             builder.RegisterInstance(_conversationConfiguration);
+        }
+
+        if (_sceneConfiguration != null)
+        {
+            builder.RegisterInstance(_sceneConfiguration);
+            builder.Register<AddressableSceneLoader>(Lifetime.Singleton)
+                .WithParameter(_sceneConfiguration);
         }
     }
 }
