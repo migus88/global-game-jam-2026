@@ -47,4 +47,8 @@ namespace Game.Scenes.Events
     public readonly struct MainMenuReadyEvent : IEvent
     {
     }
+
+    public readonly struct PlayerWonEvent : IEvent
+    {
+    }
 }

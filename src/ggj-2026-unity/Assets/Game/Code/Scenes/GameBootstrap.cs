@@ -82,6 +82,16 @@ namespace Game.Scenes
 
             GameSceneManager.Instance?.RegisterGameOverScene(gameOverScene);
 
+            var winScene = await _sceneLoader.LoadWinSceneAsync();
+
+            if (!winScene.Scene.IsValid())
+            {
+                Debug.LogError("GameBootstrap: Failed to load win scene");
+                return;
+            }
+
+            GameSceneManager.Instance?.RegisterWinScene(winScene);
+
             if (BootstrapLoader.HasRequestedScene)
             {
                 await LoadRequestedSceneAsync();

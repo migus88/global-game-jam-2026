@@ -30,6 +30,12 @@ MonoBehaviour:
     m_SubObjectGUID: 
     m_SubObjectType: 
     m_EditorAssetChanged: 0
+  <WinScene>k__BackingField:
+    m_AssetGUID: 7ff6ca3c11469450699d58071e05b58e
+    m_SubObjectName: 
+    m_SubObjectGUID: 
+    m_SubObjectType: 
+    m_EditorAssetChanged: 0
   <GameSceneLabel>k__BackingField: Level
   <GameOverHintDelay>k__BackingField: 3
   <MainMenuMusicVolume>k__BackingField: 0.8

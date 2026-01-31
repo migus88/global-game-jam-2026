@@ -21,6 +21,7 @@ namespace Game.Scenes
 
         private SceneInstance _currentLoadingScene;
         private SceneInstance _currentGameOverScene;
+        private SceneInstance _currentWinScene;
         private SceneInstance _currentGameScene;
         private SceneInstance _currentMainMenuScene;
 
@@ -215,6 +216,11 @@ namespace Game.Scenes
         public void RegisterGameOverScene(SceneInstance gameOverScene)
         {
             _currentGameOverScene = gameOverScene;
+        }
+
+        public void RegisterWinScene(SceneInstance winScene)
+        {
+            _currentWinScene = winScene;
         }
 
         public void RegisterGameScene(SceneInstance gameScene)

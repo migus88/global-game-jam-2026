@@ -16,6 +16,9 @@ namespace Game.Scenes
         [field: SerializeField, Tooltip("Reference to the game over scene")]
         public AssetReference GameOverScene { get; private set; }
 
+        [field: SerializeField, Tooltip("Reference to the win scene")]
+        public AssetReference WinScene { get; private set; }
+
         [Header("Game Scenes")]
         [field: SerializeField, Tooltip("Addressable label for game level scenes")]
         public string GameSceneLabel { get; private set; } = "Level";

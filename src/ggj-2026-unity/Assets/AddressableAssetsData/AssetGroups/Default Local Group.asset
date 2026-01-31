@@ -35,6 +35,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 7ff6ca3c11469450699d58071e05b58e
+    m_Address: Assets/Game/Scenes/Win.unity
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 9098d725eed69429392cae96097626bd
     m_Address: Robot Yellow
     m_ReadOnly: 0
