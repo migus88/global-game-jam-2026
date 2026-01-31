@@ -122,17 +122,23 @@ namespace Game.Conversation
 
             Debug.Log($"[ConversationManager] Showing question: {_currentQuestion.Text}");
 
-            if (_currentQuestion.AudioClip != null)
-            {
-                _soundManager?.PlayClip2D(_currentQuestion.AudioClip);
-            }
-
             if (_conversationUI == null)
             {
                 Debug.LogError("[ConversationManager] ConversationUI is not assigned!");
             }
 
-            _conversationUI?.ShowQuestion(_currentQuestion);
+            // Show question text first
+            _conversationUI?.ShowQuestionText(_currentQuestion.Text);
+
+            // Play audio and wait for it to finish before showing answers
+            if (_currentQuestion.AudioClip != null)
+            {
+                _soundManager?.PlayClip2D(_currentQuestion.AudioClip);
+                await UniTask.Delay(TimeSpan.FromSeconds(_currentQuestion.AudioClip.length));
+            }
+
+            // Now show the answer buttons
+            _conversationUI?.ShowAnswers(_currentQuestion);
         }
 
         private void OnAnswerSelected(int answerIndex)

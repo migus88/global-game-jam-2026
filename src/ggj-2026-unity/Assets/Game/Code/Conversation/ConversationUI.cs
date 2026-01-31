@@ -48,15 +48,20 @@ namespace Game.Conversation
             }
         }
 
-        public void ShowQuestion(ConversationQuestion question)
+        public void ShowQuestionText(string text)
         {
             _container?.SetActive(true);
-            _answersContainer?.SetActive(true);
+            _answersContainer?.SetActive(false);
 
             if (_dialogueText != null)
             {
-                _dialogueText.text = question.Text;
+                _dialogueText.text = text;
             }
+        }
+
+        public void ShowAnswers(ConversationQuestion question)
+        {
+            _answersContainer?.SetActive(true);
 
             for (int i = 0; i < _answerButtons.Length; i++)
             {
@@ -74,6 +79,12 @@ namespace Game.Conversation
                     _answerButtons[i].gameObject.SetActive(false);
                 }
             }
+        }
+
+        public void ShowQuestion(ConversationQuestion question)
+        {
+            ShowQuestionText(question.Text);
+            ShowAnswers(question);
         }
 
         public void ShowResponse(ConversationResponse response)

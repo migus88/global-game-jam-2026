@@ -1,4 +1,5 @@
 using System;
+using Game.AI;
 using Game.Configuration;
 using Game.Conversation.Events;
 using Game.Events;
@@ -27,6 +28,7 @@ namespace Game.Detection
         private GameConfiguration _config;
         private VisionConeSettings _settings;
         private EventAggregator _eventAggregator;
+        private Transform _ownerTransform;
 
         private MeshFilter _meshFilter;
         private MeshRenderer _meshRenderer;
@@ -69,6 +71,7 @@ namespace Game.Detection
         private void Start()
         {
             ResolveDependenciesIfNeeded();
+            FindOwnerTransform();
 
             if (_settings == null)
             {
@@ -79,6 +82,22 @@ namespace Game.Detection
             InitializeMesh();
             CreateMaterial();
             UpdateVisual(0f);
+        }
+
+        private void FindOwnerTransform()
+        {
+            // Find the parent that has EnemyBehavior component
+            var enemy = GetComponentInParent<EnemyBehavior>();
+
+            if (enemy != null)
+            {
+                _ownerTransform = enemy.transform;
+            }
+            else
+            {
+                // Fallback to parent if no EnemyBehavior found
+                _ownerTransform = transform.parent != null ? transform.parent : transform;
+            }
         }
 
         private void ResolveDependenciesIfNeeded()
@@ -228,7 +247,7 @@ namespace Game.Detection
                 {
                     _isDetected = true;
                     Detected?.Invoke(_currentTarget);
-                    _eventAggregator?.Publish(new PlayerCaughtEvent(transform.root, _currentTarget));
+                    _eventAggregator?.Publish(new PlayerCaughtEvent(_ownerTransform, _currentTarget));
                 }
             }
             else
