@@ -10,7 +10,7 @@ namespace Game.Sound
         public AudioClip[] BackgroundMusic { get; private set; }
 
         [field: SerializeField, Header("Level Intro")]
-        public AudioClip IntroSound { get; private set; }
+        public AmbientPhrase IntroPhrase { get; private set; }
 
         [field: SerializeField, Header("Ambient Phrases")]
         public AmbientPhrase[] AmbientPhrases { get; private set; }

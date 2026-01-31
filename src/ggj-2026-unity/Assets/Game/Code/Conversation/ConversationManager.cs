@@ -5,6 +5,7 @@ using Game.Conversation.Events;
 using Game.Events;
 using Game.GameState;
 using Game.GameState.Events;
+using Game.Scenes.Events;
 using Game.Sound;
 using Migs.MLock.Interfaces;
 using UnityEngine;
@@ -15,6 +16,9 @@ namespace Game.Conversation
 {
     public class ConversationManager : MonoBehaviour
     {
+        private static readonly int SpeedAnimatorHash = Animator.StringToHash("Speed");
+        private static readonly int MotionSpeedAnimatorHash = Animator.StringToHash("MotionSpeed");
+
         [SerializeField]
         private ConversationUI _conversationUI;
 
@@ -24,9 +28,12 @@ namespace Game.Conversation
         private GameLockService _lockService;
 
         private Transform _currentEnemy;
+        private Transform _currentPlayer;
+        private Animator _playerAnimator;
         private ConversationQuestion _currentQuestion;
         private ILock<GameLockTags> _currentLock;
         private bool _isInConversation;
+        private bool _hasPlayerWon;
 
         public bool IsInConversation => _isInConversation;
 
@@ -47,6 +54,7 @@ namespace Game.Conversation
         {
             ResolveDependenciesIfNeeded();
             _eventAggregator?.Subscribe<PlayerCaughtEvent>(OnPlayerCaught);
+            _eventAggregator?.Subscribe<PlayerWonEvent>(OnPlayerWon);
 
             if (_conversationUI != null)
             {
@@ -78,6 +86,7 @@ namespace Game.Conversation
         private void OnDestroy()
         {
             _eventAggregator?.Unsubscribe<PlayerCaughtEvent>(OnPlayerCaught);
+            _eventAggregator?.Unsubscribe<PlayerWonEvent>(OnPlayerWon);
             _currentLock?.Dispose();
 
             if (_conversationUI != null)
@@ -86,20 +95,26 @@ namespace Game.Conversation
             }
         }
 
+        private void OnPlayerWon(PlayerWonEvent evt)
+        {
+            _hasPlayerWon = true;
+        }
+
         private void OnPlayerCaught(PlayerCaughtEvent evt)
         {
-            if (_isInConversation)
+            if (_isInConversation || _hasPlayerWon)
             {
                 return;
             }
 
-            StartConversation(evt.Enemy).Forget();
+            StartConversation(evt.Enemy, evt.Player).Forget();
         }
 
-        private async UniTaskVoid StartConversation(Transform enemy)
+        private async UniTaskVoid StartConversation(Transform enemy, Transform player)
         {
             _isInConversation = true;
             _currentEnemy = enemy;
+            _currentPlayer = player;
 
             Debug.Log("[ConversationManager] Starting conversation");
 
@@ -107,6 +122,21 @@ namespace Game.Conversation
             Cursor.lockState = CursorLockMode.None;
 
             _currentLock = _lockService?.Lock(GameLockTags.All);
+
+            // Hide the player and stop animations
+            if (_currentPlayer != null)
+            {
+                _playerAnimator = _currentPlayer.GetComponentInChildren<Animator>();
+
+                if (_playerAnimator != null)
+                {
+                    _playerAnimator.SetFloat(SpeedAnimatorHash, 0f);
+                    _playerAnimator.SetFloat(MotionSpeedAnimatorHash, 0f);
+                }
+
+                _currentPlayer.gameObject.SetActive(false);
+            }
+
             _eventAggregator?.Publish(new ConversationStartedEvent(enemy));
 
             await UniTask.Delay(TimeSpan.FromSeconds(_configuration.DelayBeforeQuestion));
@@ -193,6 +223,12 @@ namespace Game.Conversation
 
             _eventAggregator?.Publish(new ConversationEndedEvent(wasCorrect, _currentEnemy));
 
+            // Show the player again
+            if (_currentPlayer != null)
+            {
+                _currentPlayer.gameObject.SetActive(true);
+            }
+
             if (wasCorrect)
             {
                 Cursor.visible = false;
@@ -213,6 +249,8 @@ namespace Game.Conversation
 
             _isInConversation = false;
             _currentEnemy = null;
+            _currentPlayer = null;
+            _playerAnimator = null;
             _currentQuestion = null;
 
             await UniTask.Yield();
