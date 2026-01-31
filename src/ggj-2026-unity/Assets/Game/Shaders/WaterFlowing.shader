@@ -28,6 +28,9 @@ Shader "Game/WaterFlowing"
         _FresnelPower ("Fresnel Power", Range(1, 10)) = 3
         _FresnelIntensity ("Fresnel Intensity", Range(0, 1)) = 0.5
         
+        [Header(Edge Blending)]
+        _EdgeFadeWidth ("Edge Fade Width", Range(0, 0.5)) = 0.1
+        
         [Header(Foam Lines)]
         _FoamLineScale ("Foam Line Scale", Range(1, 20)) = 8
         _FoamLineSpeed ("Foam Line Speed", Range(0.1, 5)) = 1
@@ -50,14 +53,6 @@ Shader "Game/WaterFlowing"
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
             Cull Back
-
-            // Stencil buffer to prevent overlapping water planes from double-rendering
-            Stencil
-            {
-                Ref 1
-                Comp NotEqual
-                Pass Replace
-            }
 
             HLSLPROGRAM
             #pragma vertex vert
@@ -94,6 +89,7 @@ Shader "Game/WaterFlowing"
                 float _WaveHeight;
                 float _WaveScale;
                 float _Turbulence;
+                float _EdgeFadeWidth;
                 float _ShadowThreshold;
                 float4 _ShadowColor;
                 float _SpecularThreshold;
@@ -194,6 +190,10 @@ Shader "Game/WaterFlowing"
                 
                 float foamLines = GetFoamLines(input.flowUV, _Time.y, flowDir);
                 
+                // Edge fade based on UV distance from edges
+                float2 uvFade = saturate(input.uv / _EdgeFadeWidth) * saturate((1.0 - input.uv) / _EdgeFadeWidth);
+                float edgeFade = uvFade.x * uvFade.y;
+                
                 // Use uniform color blend (no UV dependency) for seamless tiling
                 half4 waterColor = lerp(_DeepColor, _ShallowColor, 0.5);
                 
@@ -206,6 +206,9 @@ Shader "Game/WaterFlowing"
                 litColor.rgb = lerp(litColor.rgb, _FoamColor.rgb, foamLines);
                 
                 litColor.a = lerp(waterColor.a, 1.0, fresnel * 0.5 + foamLines * 0.3);
+                
+                // Apply edge fade
+                litColor.a *= edgeFade;
                 
                 return litColor;
             }
