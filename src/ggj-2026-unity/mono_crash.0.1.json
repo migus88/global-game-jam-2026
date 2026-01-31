@@ -20,6 +20,7 @@
     "minor_gc_time" : "0",
     "major_gc_time" : "144871",
     "minor_gc_count" : "0",
+    "major_gc_count" : "7",
     "major_gc_time_concurrent" : "0"
  },
   "threads" : [
