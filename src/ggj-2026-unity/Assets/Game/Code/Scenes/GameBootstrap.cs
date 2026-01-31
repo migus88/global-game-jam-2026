@@ -72,6 +72,16 @@ namespace Game.Scenes
 
             GameSceneManager.Instance?.RegisterLoadingScene(loadingScene);
 
+            var gameOverScene = await _sceneLoader.LoadGameOverSceneAsync();
+
+            if (!gameOverScene.Scene.IsValid())
+            {
+                Debug.LogError("GameBootstrap: Failed to load game over scene");
+                return;
+            }
+
+            GameSceneManager.Instance?.RegisterGameOverScene(gameOverScene);
+
             if (BootstrapLoader.HasRequestedScene)
             {
                 await LoadRequestedSceneAsync();

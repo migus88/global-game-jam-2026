@@ -33,6 +33,11 @@ namespace Game.Scenes
             return await LoadSceneAsync(_configuration.LoadingScene);
         }
 
+        public async UniTask<SceneInstance> LoadGameOverSceneAsync()
+        {
+            return await LoadSceneAsync(_configuration.GameOverScene);
+        }
+
         public async UniTask<SceneInstance> LoadRandomGameSceneAsync()
         {
             var locations = await LoadSceneLocationsAsync(_configuration.GameSceneLabel);

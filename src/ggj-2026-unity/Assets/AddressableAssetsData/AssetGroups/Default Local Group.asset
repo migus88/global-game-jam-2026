@@ -20,6 +20,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 328786d7f69d94072803c19536ed399a
+    m_Address: GameOver
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3cc1b3def73e64377815bdb2b6089dad
     m_Address: Player
     m_ReadOnly: 0

@@ -20,6 +20,7 @@ namespace Game.Scenes
         private GameLockService _gameLockService;
 
         private SceneInstance _currentLoadingScene;
+        private SceneInstance _currentGameOverScene;
         private SceneInstance _currentGameScene;
         private SceneInstance _currentMainMenuScene;
 
@@ -209,6 +210,11 @@ namespace Game.Scenes
         public void RegisterLoadingScene(SceneInstance loadingScene)
         {
             _currentLoadingScene = loadingScene;
+        }
+
+        public void RegisterGameOverScene(SceneInstance gameOverScene)
+        {
+            _currentGameOverScene = gameOverScene;
         }
 
         public void RegisterGameScene(SceneInstance gameScene)
