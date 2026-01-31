@@ -12,7 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 909c1df28e6ef4bf98d5c9973575bae9, type: 3}
   m_Name: SoundConfiguration
   m_EditorClassIdentifier: Assembly-CSharp::Game.Sound.SoundConfiguration
-  <BackgroundMusic>k__BackingField: []
+  <BackgroundMusic>k__BackingField:
+  - {fileID: 8300000, guid: ef7c904ca72d849e2bf8d9ae0b038331, type: 3}
+  - {fileID: 8300000, guid: 612af108aef754184963aa99a7897e06, type: 3}
   <AmbientPhrases>k__BackingField:
   - <Clip>k__BackingField: {fileID: 8300000, guid: d447784d0ea634a19806bdc95dcf3f5c, type: 3}
     <Text>k__BackingField: This is not creepy. This is culture.

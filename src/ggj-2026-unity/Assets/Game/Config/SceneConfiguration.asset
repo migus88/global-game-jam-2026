@@ -26,6 +26,6 @@ MonoBehaviour:
     m_EditorAssetChanged: 0
   <GameSceneLabel>k__BackingField: Level
   <GameOverHintDelay>k__BackingField: 3
-  <MainMenuMusicVolume>k__BackingField: 1
-  <GameplayMusicVolume>k__BackingField: 0.3
+  <MainMenuMusicVolume>k__BackingField: 0.8
+  <GameplayMusicVolume>k__BackingField: 0.1
   <MusicTransitionDuration>k__BackingField: 0.3
