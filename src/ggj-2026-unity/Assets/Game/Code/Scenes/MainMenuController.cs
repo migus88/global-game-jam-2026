@@ -1,6 +1,8 @@
 using Game.Events;
 using Game.Scenes.Events;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using VContainer;
 using VContainer.Unity;
 
@@ -10,6 +12,9 @@ namespace Game.Scenes
     {
         [SerializeField]
         private GameObject _menuContainer;
+
+        [SerializeField]
+        private Selectable _firstSelected;
 
         private EventAggregator _eventAggregator;
 
@@ -60,6 +65,17 @@ namespace Game.Scenes
         public void ShowMenu()
         {
             _menuContainer?.SetActive(true);
+            SelectFirstButton();
+        }
+
+        private void SelectFirstButton()
+        {
+            if (_firstSelected == null)
+            {
+                return;
+            }
+
+            EventSystem.current?.SetSelectedGameObject(_firstSelected.gameObject);
         }
 
         public void HideMenu()
