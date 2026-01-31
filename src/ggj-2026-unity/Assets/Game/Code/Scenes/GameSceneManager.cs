@@ -127,6 +127,8 @@ namespace Game.Scenes
                     _currentMainMenuScene = default;
                 }
 
+                SetCameraClearFlags(CameraClearFlags.Skybox);
+
                 _currentGameScene = await _sceneLoader.LoadRandomGameSceneAsync();
 
                 if (_currentGameScene.Scene.IsValid())
@@ -174,6 +176,8 @@ namespace Game.Scenes
                     await _sceneLoader.UnloadSceneAsync(_currentGameScene);
                     _currentGameScene = default;
                 }
+
+                SetCameraClearFlags(CameraClearFlags.SolidColor);
 
                 _currentMainMenuScene = await _sceneLoader.LoadMainMenuSceneAsync();
 
@@ -226,6 +230,16 @@ namespace Game.Scenes
         public void RegisterGameScene(SceneInstance gameScene)
         {
             _currentGameScene = gameScene;
+        }
+
+        private void SetCameraClearFlags(CameraClearFlags flags)
+        {
+            var mainCamera = Camera.main;
+
+            if (mainCamera != null)
+            {
+                mainCamera.clearFlags = flags;
+            }
         }
     }
 }

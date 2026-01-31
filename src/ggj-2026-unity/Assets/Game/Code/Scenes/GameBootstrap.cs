@@ -107,6 +107,8 @@ namespace Game.Scenes
 
         private async UniTask LoadMainMenuAsync()
         {
+            SetCameraClearFlags(CameraClearFlags.SolidColor);
+
             var mainMenuScene = await _sceneLoader.LoadMainMenuSceneAsync();
 
             if (mainMenuScene.Scene.IsValid())
@@ -124,6 +126,8 @@ namespace Game.Scenes
 
             Debug.Log($"GameBootstrap: Loading requested scene '{requestedSceneName}'");
 
+            SetCameraClearFlags(CameraClearFlags.Skybox);
+
             var gameScene = await _sceneLoader.LoadGameSceneByNameAsync(requestedSceneName);
 
             if (gameScene.Scene.IsValid())
@@ -137,6 +141,16 @@ namespace Game.Scenes
             {
                 Debug.LogWarning($"GameBootstrap: Failed to load requested scene '{requestedSceneName}', falling back to main menu");
                 await LoadMainMenuAsync();
+            }
+        }
+
+        private void SetCameraClearFlags(CameraClearFlags flags)
+        {
+            var mainCamera = Camera.main;
+
+            if (mainCamera != null)
+            {
+                mainCamera.clearFlags = flags;
             }
         }
     }
