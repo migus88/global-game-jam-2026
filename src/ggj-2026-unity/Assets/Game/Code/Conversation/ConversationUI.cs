@@ -1,4 +1,5 @@
 using System;
+using Cysharp.Threading.Tasks;
 using Game.Conversation.Data;
 using TMPro;
 using UnityEngine;
@@ -81,15 +82,40 @@ namespace Game.Conversation
                 }
             }
 
-            SelectFirstAnswer();
+            SelectFirstAnswerAsync().Forget();
         }
 
-        private void SelectFirstAnswer()
+        private async UniTaskVoid SelectFirstAnswerAsync()
         {
-            if (_answerButtons.Length > 0 && _answerButtons[0].gameObject.activeSelf)
+            // Wait for end of frame for UI layout to complete
+            await UniTask.WaitForEndOfFrame();
+
+            if (_answerButtons.Length == 0 || !_answerButtons[0].gameObject.activeSelf)
             {
-                EventSystem.current?.SetSelectedGameObject(_answerButtons[0].gameObject);
+                Debug.LogWarning("[ConversationUI] No answer buttons available to select");
+                return;
             }
+
+            var button = _answerButtons[0];
+            var eventSystem = EventSystem.current;
+
+            if (eventSystem == null)
+            {
+                Debug.LogError("[ConversationUI] No EventSystem found!");
+                return;
+            }
+
+            // Clear current selection first
+            eventSystem.SetSelectedGameObject(null);
+
+            // Wait another frame
+            await UniTask.Yield();
+
+            // Now select the button
+            eventSystem.SetSelectedGameObject(button.gameObject);
+            button.Select();
+
+            Debug.Log($"[ConversationUI] Selected button: {button.name}, Current: {eventSystem.currentSelectedGameObject?.name}");
         }
 
         public void ShowQuestion(ConversationQuestion question)
