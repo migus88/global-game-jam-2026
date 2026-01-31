@@ -146,7 +146,7 @@ namespace Game.Scenes
 
         private void SetCameraClearFlags(CameraClearFlags flags)
         {
-            var mainCamera = Camera.main;
+            var mainCamera = UnityEngine.Camera.main;
 
             if (mainCamera != null)
             {

@@ -43,6 +43,12 @@ namespace Game.AI
         [SerializeField] private float _searchDuration = 3f;
         [SerializeField, Range(30f, 180f)] private float _searchScanAngle = 120f;
         [SerializeField] private float _searchScanSpeed = 90f;
+        [SerializeField] private float _searchRadius = 5f;
+        [SerializeField] private int _searchPointCount = 3;
+
+        [Header("Prediction")]
+        [SerializeField] private float _predictionTime = 1f;
+        [SerializeField] private float _velocitySampleRate = 0.1f;
 
         private EnemyPatrolController _patrolController;
         private NavMeshAgent _navAgent;
@@ -61,6 +67,18 @@ namespace Game.AI
         private Quaternion _followTargetRotation;
         private bool _isLocked;
         private bool _isIgnoringPlayer;
+
+        // Prediction tracking
+        private Vector3 _lastTrackedPosition;
+        private Vector3 _playerVelocity;
+        private float _velocitySampleTimer;
+        private Vector3 _playerMovementDirection;
+
+        // Search points
+        private Vector3[] _searchPoints;
+        private int _currentSearchPointIndex;
+        private bool _isMovingToSearchPoint;
+        private bool _isScanningAtSearchPoint;
 
         public EnemyState CurrentState => _currentState;
         public bool IsPlayerVisible => _visionCone != null && _visionCone.CurrentTarget != null && !_isIgnoringPlayer;
@@ -162,6 +180,9 @@ namespace Game.AI
                 _wasDetecting = false;
                 _isSearchScanning = false;
                 _isRotatingBeforeFollow = false;
+                _isMovingToSearchPoint = false;
+                _isScanningAtSearchPoint = false;
+                _playerMovementDirection = Vector3.zero;
                 SetState(EnemyState.Patrol);
                 _patrolController?.StartPatrol();
             }
@@ -292,12 +313,48 @@ namespace Game.AI
                 _isSearchScanning = false;
                 _navAgent.speed = _followSpeed;
                 _navAgent.updateRotation = true;
+                _velocitySampleTimer = 0f;
+                _playerVelocity = Vector3.zero;
+
+                if (_visionCone.CurrentTarget != null)
+                {
+                    _lastTrackedPosition = _visionCone.CurrentTarget.position;
+                }
             }
 
-            // Update last known position only when player is visible
+            // Update last known position and track velocity when player is visible
             if (_visionCone.CurrentTarget != null)
             {
-                _lastKnownPosition = _visionCone.CurrentTarget.position;
+                var currentPlayerPos = _visionCone.CurrentTarget.position;
+
+                // Sample velocity periodically
+                _velocitySampleTimer += Time.deltaTime;
+                if (_velocitySampleTimer >= _velocitySampleRate)
+                {
+                    _playerVelocity = (currentPlayerPos - _lastTrackedPosition) / _velocitySampleTimer;
+                    _playerVelocity.y = 0f;
+
+                    if (_playerVelocity.sqrMagnitude > 0.1f)
+                    {
+                        _playerMovementDirection = _playerVelocity.normalized;
+                    }
+
+                    _lastTrackedPosition = currentPlayerPos;
+                    _velocitySampleTimer = 0f;
+                }
+
+                // Calculate predicted position
+                var predictedPosition = currentPlayerPos + (_playerVelocity * _predictionTime);
+
+                // Validate predicted position on NavMesh
+                if (NavMesh.SamplePosition(predictedPosition, out var hit, 3f, NavMesh.AllAreas))
+                {
+                    _lastKnownPosition = hit.position;
+                }
+                else
+                {
+                    _lastKnownPosition = currentPlayerPos;
+                }
             }
 
             // Check if we need to rotate first before moving
@@ -353,38 +410,160 @@ namespace Game.AI
             if (IsPlayerVisible)
             {
                 _isSearchScanning = false;
+                _isMovingToSearchPoint = false;
+                _isScanningAtSearchPoint = false;
                 _navAgent.updateRotation = true;
                 return TaskStatus.Failure; // Let detecting branch handle it
             }
 
-            // Initialize search scan (we've already arrived at last known position)
+            // Initialize search (generate search points)
             if (!_isSearchScanning)
             {
                 _isSearchScanning = true;
-                _searchStartRotation = transform.rotation;
                 _searchTimer = 0f;
-                _navAgent.isStopped = true;
-                _navAgent.updateRotation = false;
-                SetWalking(false);
+                GenerateSearchPoints();
+                _currentSearchPointIndex = 0;
+                _isMovingToSearchPoint = true;
+                _isScanningAtSearchPoint = false;
+                _navAgent.speed = _followSpeed;
+                _navAgent.updateRotation = true;
+                _navAgent.isStopped = false;
+
+                if (_searchPoints.Length > 0)
+                {
+                    _navAgent.SetDestination(_searchPoints[0]);
+                    SetWalking(true);
+                }
             }
 
-            // Perform scanning
             _searchTimer += Time.deltaTime;
-            PerformSearchScan();
 
             // Check if search duration elapsed
             if (_searchTimer >= _searchDuration)
             {
-                // Search complete, return to patrol
-                _isSearchScanning = false;
-                _wasDetecting = false;
-                _navAgent.updateRotation = true;
-                SetState(EnemyState.Patrol);
-                _patrolController.StartPatrol();
+                EndSearch();
                 return TaskStatus.Success;
             }
 
+            // Moving to a search point
+            if (_isMovingToSearchPoint)
+            {
+                if (!_navAgent.pathPending && (!_navAgent.hasPath || _navAgent.remainingDistance <= _navAgent.stoppingDistance))
+                {
+                    // Arrived at search point, start scanning
+                    _isMovingToSearchPoint = false;
+                    _isScanningAtSearchPoint = true;
+                    _searchStartRotation = transform.rotation;
+                    _navAgent.isStopped = true;
+                    _navAgent.updateRotation = false;
+                    SetWalking(false);
+                }
+            }
+            // Scanning at search point
+            else if (_isScanningAtSearchPoint)
+            {
+                PerformSearchScan();
+
+                // After one full scan cycle, move to next point
+                float scanCycleTime = (_searchScanAngle / _searchScanSpeed) * 2f;
+                float scanTime = _searchTimer - GetTimeToReachCurrentPoint();
+
+                if (scanTime >= scanCycleTime)
+                {
+                    _currentSearchPointIndex++;
+
+                    if (_currentSearchPointIndex < _searchPoints.Length)
+                    {
+                        // Move to next search point
+                        _isScanningAtSearchPoint = false;
+                        _isMovingToSearchPoint = true;
+                        _navAgent.isStopped = false;
+                        _navAgent.updateRotation = true;
+                        _navAgent.SetDestination(_searchPoints[_currentSearchPointIndex]);
+                        SetWalking(true);
+                    }
+                    else
+                    {
+                        // Finished all search points
+                        EndSearch();
+                        return TaskStatus.Success;
+                    }
+                }
+            }
+
             return TaskStatus.Continue;
+        }
+
+        private void GenerateSearchPoints()
+        {
+            var points = new System.Collections.Generic.List<Vector3>();
+
+            // First point: in the direction player was moving (if known)
+            if (_playerMovementDirection.sqrMagnitude > 0.1f)
+            {
+                var forwardPoint = _lastKnownPosition + (_playerMovementDirection * _searchRadius);
+                if (NavMesh.SamplePosition(forwardPoint, out var hit, 3f, NavMesh.AllAreas))
+                {
+                    points.Add(hit.position);
+                }
+            }
+
+            // Generate points around the last known position
+            float angleStep = 360f / (_searchPointCount + 1);
+            float startAngle = _playerMovementDirection.sqrMagnitude > 0.1f
+                ? Mathf.Atan2(_playerMovementDirection.x, _playerMovementDirection.z) * Mathf.Rad2Deg
+                : transform.eulerAngles.y;
+
+            for (int i = 0; i < _searchPointCount; i++)
+            {
+                float angle = startAngle + (angleStep * (i + 1));
+                var direction = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+                var point = _lastKnownPosition + (direction * _searchRadius);
+
+                if (NavMesh.SamplePosition(point, out var hit, 3f, NavMesh.AllAreas))
+                {
+                    // Check if we can path to this point
+                    var path = new NavMeshPath();
+                    if (_navAgent.CalculatePath(hit.position, path) && path.status == NavMeshPathStatus.PathComplete)
+                    {
+                        points.Add(hit.position);
+                    }
+                }
+            }
+
+            // Always include the last known position as a fallback
+            if (points.Count == 0)
+            {
+                points.Add(_lastKnownPosition);
+            }
+
+            _searchPoints = points.ToArray();
+        }
+
+        private float GetTimeToReachCurrentPoint()
+        {
+            // Rough estimate of time spent moving to current point
+            float totalDistance = 0f;
+            for (int i = 0; i < _currentSearchPointIndex; i++)
+            {
+                var from = i == 0 ? _lastKnownPosition : _searchPoints[i - 1];
+                var to = _searchPoints[i];
+                totalDistance += Vector3.Distance(from, to);
+            }
+            return totalDistance / _followSpeed;
+        }
+
+        private void EndSearch()
+        {
+            _isSearchScanning = false;
+            _isMovingToSearchPoint = false;
+            _isScanningAtSearchPoint = false;
+            _wasDetecting = false;
+            _playerMovementDirection = Vector3.zero;
+            _navAgent.updateRotation = true;
+            _navAgent.isStopped = false;
+            SetState(EnemyState.Patrol);
+            _patrolController.StartPatrol();
         }
 
         private TaskStatus DoPatrol()
@@ -393,6 +572,8 @@ namespace Game.AI
             {
                 // Reached last known position, enter search mode
                 _isSearchScanning = false;
+                _isMovingToSearchPoint = false;
+                _isScanningAtSearchPoint = false;
                 _isRotatingBeforeFollow = false;
                 SetState(EnemyState.Searching);
                 return TaskStatus.Failure; // Let search branch handle it
