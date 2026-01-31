@@ -16,6 +16,12 @@ namespace Game.Scenes
         [SerializeField]
         private Selectable _firstSelected;
 
+        [SerializeField]
+        private GameObject _creditsContainer;
+
+        [SerializeField]
+        private Selectable _creditsCloseButton;
+
         private EventAggregator _eventAggregator;
 
         [Inject]
@@ -62,9 +68,26 @@ namespace Game.Scenes
 #endif
         }
 
+        public void OnCreditsButtonClicked()
+        {
+            _creditsContainer?.SetActive(true);
+
+            if (_creditsCloseButton != null)
+            {
+                EventSystem.current?.SetSelectedGameObject(_creditsCloseButton.gameObject);
+            }
+        }
+
+        public void OnCreditsCloseButtonClicked()
+        {
+            _creditsContainer?.SetActive(false);
+            SelectFirstButton();
+        }
+
         public void ShowMenu()
         {
             _menuContainer?.SetActive(true);
+            _creditsContainer?.SetActive(false);
             SelectFirstButton();
         }
 
