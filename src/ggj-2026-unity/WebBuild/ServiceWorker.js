@@ -1,4 +1,4 @@
-const cacheName = "DefaultCompany-global-game-jam-2026-0.1.0";
+const cacheName = "Engine Room Games-Absolutely Not Not Human-0.1.0";
 const contentToCache = [
     "Build/WebBuild.loader.js",
     "Build/WebBuild.framework.js.br",
