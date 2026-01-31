@@ -14,6 +14,7 @@ namespace Game.GameState
 
         private GameLockService _lockService;
         private StarterAssetsInputs _starterInputs;
+        private bool _isQuitting;
 
         public GameLockTags LockTags => GameLockTags.PlayerInput;
 
@@ -54,15 +55,15 @@ namespace Game.GameState
             _lockService ??= lifetimeScope.Container.Resolve<GameLockService>();
         }
 
+        private void OnApplicationQuit()
+        {
+            _isQuitting = true;
+        }
+
         private void OnDestroy()
         {
+            _isQuitting = true;
             _lockService?.Unsubscribe(this);
-
-            // Re-enable input on destroy to prevent errors when exiting play mode
-            if (_playerInput != null && !_playerInput.inputIsActive)
-            {
-                _playerInput.ActivateInput();
-            }
         }
 
         public void HandleLocking()
@@ -77,7 +78,13 @@ namespace Game.GameState
 
         public void HandleUnlocking()
         {
-            if (_playerInput != null)
+            // Skip activation during shutdown to prevent errors
+            if (_isQuitting)
+            {
+                return;
+            }
+
+            if (_playerInput != null && _playerInput.enabled)
             {
                 _playerInput.ActivateInput();
             }

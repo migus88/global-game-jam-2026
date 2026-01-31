@@ -155,14 +155,13 @@ namespace Game.AI
         {
             _isLocked = false;
 
-            // Reset detection state
-            _wasDetecting = false;
-            _isSearchScanning = false;
-            _isRotatingBeforeFollow = false;
-
-            // Always return to patrol after conversation
-            if (_currentState == EnemyState.Alert || _isIgnoringPlayer)
+            // Only reset state for the robot that had the conversation (is ignoring player)
+            // Other robots should resume their current behavior
+            if (_isIgnoringPlayer)
             {
+                _wasDetecting = false;
+                _isSearchScanning = false;
+                _isRotatingBeforeFollow = false;
                 SetState(EnemyState.Patrol);
                 _patrolController?.StartPatrol();
             }

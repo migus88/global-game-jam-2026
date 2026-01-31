@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb810e58df9c54cb68788b356ce02159, type: 3}
+  m_Name: ButtonMappingConfig
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Input.ButtonMappingConfig
+  _buttonMappings:
+  - <ActionName>k__BackingField: Move
+    <KeyboardMouseSprite>k__BackingField: {fileID: 21300000, guid: 570aa86b207fb45c1badce669366f478, type: 3}
+    <GamepadSprite>k__BackingField: {fileID: 21300000, guid: aa8c590742d80440d967a1ba262ef223, type: 3}
+  - <ActionName>k__BackingField: Look
+    <KeyboardMouseSprite>k__BackingField: {fileID: 21300000, guid: f368b188858d94bfa9131ef469b454f0, type: 3}
+    <GamepadSprite>k__BackingField: {fileID: 21300000, guid: b9ac14ad7ad3046999cd88338924dbb4, type: 3}
+  - <ActionName>k__BackingField: Sprint
+    <KeyboardMouseSprite>k__BackingField: {fileID: 21300000, guid: f8ba0873fe87b438abb3686149b10a19, type: 3}
+    <GamepadSprite>k__BackingField: {fileID: 21300000, guid: 98a9ccf8bca224df8991830799ae8c20, type: 3}
+  - <ActionName>k__BackingField: Hide
+    <KeyboardMouseSprite>k__BackingField: {fileID: 21300000, guid: 07e33b0f2c66e46d385b71219ce05d40, type: 3}
+    <GamepadSprite>k__BackingField: {fileID: 21300000, guid: ae443639d7d1d41a38b3bf944a33ae02, type: 3}

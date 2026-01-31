@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6441894901482352577}
   - component: {fileID: 635286169097301089}
   - component: {fileID: 7693878822827217537}
+  - component: {fileID: 5167840212270056693}
   m_Layer: 6
   m_Name: Dumpster
   m_TagString: Untagged
@@ -56,7 +57,9 @@ MonoBehaviour:
   _occupiedObject: {fileID: 4395786999820993703}
   _enterSoundName: Dumpster_Enter
   _hintRenderer: {fileID: 6837823703388331688}
+  _buttonSpriteDisplay: {fileID: 0}
   _hideActionReference: {fileID: 8640017421045523379, guid: 20d6eff899acc4f08b1b6f39a1e2ede8, type: 3}
+  _buttonMappingConfig: {fileID: 0}
 --- !u!65 &7693878822827217537
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -78,6 +81,22 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2.18, y: 1.84, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &5167840212270056693
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2223282944042712224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61baa038c809b467284fbcf651fa10bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Input.ButtonSpriteDisplay
+  _actionReference: {fileID: 8640017421045523379, guid: 20d6eff899acc4f08b1b6f39a1e2ede8, type: 3}
+  _mappingConfig: {fileID: 11400000, guid: f8797b1e8382f4d1e9c9b232ac0977a8, type: 2}
+  _spriteRenderer: {fileID: 6837823703388331688}
+  _image: {fileID: 0}
 --- !u!1 &6344920956428655561
 GameObject:
   m_ObjectHideFlags: 0

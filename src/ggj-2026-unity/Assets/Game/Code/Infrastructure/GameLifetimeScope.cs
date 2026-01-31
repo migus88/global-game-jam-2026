@@ -3,6 +3,7 @@ using Game.Conversation.Data;
 using Game.Events;
 using Game.GameState;
 using Game.Hiding;
+using Game.Input;
 using Game.LevelEditor.Data;
 using Game.Scenes;
 using Game.Sound;
@@ -18,12 +19,18 @@ public class GameLifetimeScope : LifetimeScope
     [SerializeField] private HideConfiguration _hideConfiguration;
     [SerializeField] private ConversationConfiguration _conversationConfiguration;
     [SerializeField] private SceneConfiguration _sceneConfiguration;
+    [SerializeField] private InputDeviceTracker _inputDeviceTracker;
 
     protected override void Configure(IContainerBuilder builder)
     {
         builder.RegisterInstance(_gameConfiguration);
         builder.Register<EventAggregator>(Lifetime.Singleton);
         builder.Register<GameLockService>(Lifetime.Singleton);
+
+        if (_inputDeviceTracker != null)
+        {
+            builder.RegisterComponent(_inputDeviceTracker);
+        }
 
         if (_levelConfiguration != null)
         {
