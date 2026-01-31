@@ -73,6 +73,11 @@ namespace Game.GameState
                 _playerInput.DeactivateInput();
             }
 
+            if (_starterInputs != null)
+            {
+                _starterInputs.cursorLocked = false;
+            }
+
             ResetInputValues();
         }
 
@@ -87,6 +92,11 @@ namespace Game.GameState
             if (_playerInput != null && _playerInput.enabled)
             {
                 _playerInput.ActivateInput();
+            }
+
+            if (_starterInputs != null)
+            {
+                _starterInputs.cursorLocked = true;
             }
         }
 

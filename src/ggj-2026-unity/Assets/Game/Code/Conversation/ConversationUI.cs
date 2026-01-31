@@ -2,6 +2,7 @@ using System;
 using Game.Conversation.Data;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Game.Conversation
@@ -78,6 +79,16 @@ namespace Game.Conversation
                 {
                     _answerButtons[i].gameObject.SetActive(false);
                 }
+            }
+
+            SelectFirstAnswer();
+        }
+
+        private void SelectFirstAnswer()
+        {
+            if (_answerButtons.Length > 0 && _answerButtons[0].gameObject.activeSelf)
+            {
+                EventSystem.current?.SetSelectedGameObject(_answerButtons[0].gameObject);
             }
         }
 
