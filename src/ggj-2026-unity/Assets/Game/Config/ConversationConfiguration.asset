@@ -85,9 +85,6 @@ MonoBehaviour:
       <IsCorrect>k__BackingField: 0
     - <Text>k__BackingField: Start updating, restart mid-sentence
       <IsCorrect>k__BackingField: 1
-  - <AudioClip>k__BackingField: {fileID: 0}
-    <Text>k__BackingField: 
-    <Answers>k__BackingField: []
   <CorrectResponses>k__BackingField:
   - <AudioClip>k__BackingField: {fileID: 8300000, guid: fd03f4fd96be5445b9ef17c4466954bd, type: 3}
     <Text>k__BackingField: Good to see a new fellow robot. Nice to meet you.
