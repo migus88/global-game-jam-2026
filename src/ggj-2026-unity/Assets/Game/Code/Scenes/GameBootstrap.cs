@@ -9,6 +9,8 @@ namespace Game.Scenes
 {
     public class GameBootstrap : MonoBehaviour
     {
+        public static bool IsInitialized { get; private set; }
+
         private EventAggregator _eventAggregator;
         private AddressableSceneLoader _sceneLoader;
 
@@ -22,6 +24,7 @@ namespace Game.Scenes
         private void Start()
         {
             ResolveDependenciesIfNeeded();
+            EnsureGameSceneManagerExists();
             InitializeGameAsync().Forget();
         }
 
@@ -42,6 +45,17 @@ namespace Game.Scenes
 
             _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
             _sceneLoader ??= lifetimeScope.Container.Resolve<AddressableSceneLoader>();
+        }
+
+        private void EnsureGameSceneManagerExists()
+        {
+            if (GameSceneManager.Instance != null)
+            {
+                return;
+            }
+
+            var go = new GameObject("GameSceneManager");
+            go.AddComponent<GameSceneManager>();
         }
 
         private async UniTaskVoid InitializeGameAsync()
@@ -67,6 +81,7 @@ namespace Game.Scenes
                 _eventAggregator?.Publish(new MainMenuReadyEvent());
             }
 
+            IsInitialized = true;
             Debug.Log("GameBootstrap: Game initialized successfully");
         }
     }
