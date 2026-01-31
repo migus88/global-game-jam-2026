@@ -15,6 +15,9 @@ namespace Game.Sound
         [field: SerializeField, Header("Ambient Phrases")]
         public AmbientPhrase[] AmbientPhrases { get; private set; }
 
+        [field: SerializeField, Range(0f, 2f)]
+        public float AmbientPhraseVolume { get; private set; } = 1f;
+
         [field: SerializeField, Header("Sound Effects")]
         public SoundEffectEntry[] SoundEffects { get; private set; }
 

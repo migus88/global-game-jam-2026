@@ -57,6 +57,7 @@ MonoBehaviour:
   - <Clip>k__BackingField: {fileID: 8300000, guid: a30447604deac401cadcade6d090ffdf, type: 3}
     <Text>k__BackingField: "My confidence is 99 percent. My accuracy is\u2026 also
       a number."
+  <AmbientPhraseVolume>k__BackingField: 1.417
   <SoundEffects>k__BackingField: []
   <NamedSoundEffects>k__BackingField:
   - <Name>k__BackingField: Dumpster_Enter

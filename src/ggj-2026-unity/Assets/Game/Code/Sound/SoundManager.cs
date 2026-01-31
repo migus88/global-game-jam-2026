@@ -56,8 +56,8 @@ namespace Game.Sound
             if (!is2D)
             {
                 source.rolloffMode = AudioRolloffMode.Linear;
-                source.minDistance = 1f;
-                source.maxDistance = 20f;
+                source.minDistance = 2f;
+                source.maxDistance = 50f;
             }
 
             return source;
@@ -133,7 +133,8 @@ namespace Game.Sound
                 return (null, null);
             }
 
-            var source = PlayClipAtPositionWithSource(phrase.Clip, position);
+            var volume = _configuration.AmbientPhraseVolume;
+            var source = PlayClipAtPositionWithSource(phrase.Clip, position, volume);
             return (phrase, source);
         }
 
