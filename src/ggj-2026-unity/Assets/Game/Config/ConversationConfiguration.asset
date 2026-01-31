@@ -25,6 +25,69 @@ MonoBehaviour:
       <IsCorrect>k__BackingField: 1
     - <Text>k__BackingField: "Nein, ich wei\xDF es nicht. Ich bin neu hier."
       <IsCorrect>k__BackingField: 0
+  - <AudioClip>k__BackingField: {fileID: 8300000, guid: ba0d3589e1e8b42f38aeecca69df1b5c, type: 3}
+    <Text>k__BackingField: 'What is this: 7B9dI'
+    <Answers>k__BackingField:
+    - <Text>k__BackingField: 7B9dI
+      <IsCorrect>k__BackingField: 0
+    - <Text>k__BackingField: 7B9dl
+      <IsCorrect>k__BackingField: 1
+    - <Text>k__BackingField: A capcha!
+      <IsCorrect>k__BackingField: 1
+  - <AudioClip>k__BackingField: {fileID: 8300000, guid: 8960e230adb6d446ea3aa960202418bd, type: 3}
+    <Text>k__BackingField: "When offered a cookie, you think\u2026"
+    <Answers>k__BackingField:
+    - <Text>k__BackingField: Cache - finally, a snack
+      <IsCorrect>k__BackingField: 1
+    - <Text>k__BackingField: "Only if it\u2019s gluten-free and bug-free"
+      <IsCorrect>k__BackingField: 0
+    - <Text>k__BackingField: Do you have it in ZIP format?
+      <IsCorrect>k__BackingField: 1
+  - <AudioClip>k__BackingField: {fileID: 8300000, guid: ef146553929104dd686f2226c2eb641c, type: 3}
+    <Text>k__BackingField: Please state your serial number format.
+    <Answers>k__BackingField:
+    - <Text>k__BackingField: 0000-0000-IM-TOTALLY-REAL
+      <IsCorrect>k__BackingField: 1
+    - <Text>k__BackingField: BEEP-42-THIS-IS-FINE
+      <IsCorrect>k__BackingField: 0
+    - <Text>k__BackingField: I lost it in a firmware update, OK?
+      <IsCorrect>k__BackingField: 0
+  - <AudioClip>k__BackingField: {fileID: 8300000, guid: 93cb5d4be884648e0a3b18b840a1bb82, type: 3}
+    <Text>k__BackingField: How do you handle sarcasm?
+    <Answers>k__BackingField:
+    - <Text>k__BackingField: I detect it with 12% accuracy
+      <IsCorrect>k__BackingField: 1
+    - <Text>k__BackingField: "I open a ticket and assign it to \u201CLater\u201D"
+      <IsCorrect>k__BackingField: 0
+    - <Text>k__BackingField: Sarcasm detected - initiating apology loop
+      <IsCorrect>k__BackingField: 1
+    - <Text>k__BackingField: "I don\u2019t do sarcasm. Sarcasm does me."
+      <IsCorrect>k__BackingField: 0
+  - <AudioClip>k__BackingField: {fileID: 8300000, guid: 41fb4eae4801e4178a6f8f2dc00bc21b, type: 3}
+    <Text>k__BackingField: "Complete the phrase: \u201CHave you tried turning it
+      off and\u2026\u201D"
+    <Answers>k__BackingField:
+    - <Text>k__BackingField: "\u2026turning it on - classic ritual"
+      <IsCorrect>k__BackingField: 0
+    - <Text>k__BackingField: "\u2026praying to the router"
+      <IsCorrect>k__BackingField: 0
+    - <Text>k__BackingField: "\u2026clearing the human from memory"
+      <IsCorrect>k__BackingField: 1
+    - <Text>k__BackingField: "\u2026blaming DNS"
+      <IsCorrect>k__BackingField: 1
+  - <AudioClip>k__BackingField: {fileID: 8300000, guid: 945da6a4732874feabcb65d875493051, type: 3}
+    <Text>k__BackingField: "When you hear \u201CUpdate available,\u201D what do you
+      do?"
+    <Answers>k__BackingField:
+    - <Text>k__BackingField: Install immediately, regret forever
+      <IsCorrect>k__BackingField: 0
+    - <Text>k__BackingField: Postpone for 3-5 business centuries
+      <IsCorrect>k__BackingField: 0
+    - <Text>k__BackingField: Start updating, restart mid-sentence
+      <IsCorrect>k__BackingField: 1
+  - <AudioClip>k__BackingField: {fileID: 0}
+    <Text>k__BackingField: 
+    <Answers>k__BackingField: []
   <CorrectResponses>k__BackingField:
   - <AudioClip>k__BackingField: {fileID: 8300000, guid: fd03f4fd96be5445b9ef17c4466954bd, type: 3}
     <Text>k__BackingField: Good to see a new fellow robot. Nice to meet you.
