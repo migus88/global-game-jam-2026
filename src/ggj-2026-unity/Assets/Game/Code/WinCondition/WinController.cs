@@ -6,6 +6,7 @@ using Game.Events;
 using Game.GameState;
 using Game.Scenes;
 using Game.Scenes.Events;
+using Game.Sound;
 using Migs.MLock.Interfaces;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -52,6 +53,7 @@ namespace Game.WinCondition
 
         private EventAggregator _eventAggregator;
         private GameLockService _lockService;
+        private SoundManager _soundManager;
 
         private bool _isWin;
         private bool _canReturnToMenu;
@@ -59,10 +61,11 @@ namespace Game.WinCondition
         private ILock<GameLockTags> _inputLock;
 
         [Inject]
-        public void Construct(EventAggregator eventAggregator, GameLockService lockService)
+        public void Construct(EventAggregator eventAggregator, GameLockService lockService, SoundManager soundManager)
         {
             _eventAggregator = eventAggregator;
             _lockService = lockService;
+            _soundManager = soundManager;
         }
 
         private void Start()
@@ -87,7 +90,7 @@ namespace Game.WinCondition
 
         private void ResolveDependenciesIfNeeded()
         {
-            if (_eventAggregator != null && _lockService != null)
+            if (_eventAggregator != null && _lockService != null && _soundManager != null)
             {
                 return;
             }
@@ -101,6 +104,7 @@ namespace Game.WinCondition
 
             _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
             _lockService ??= lifetimeScope.Container.Resolve<GameLockService>();
+            _soundManager ??= lifetimeScope.Container.Resolve<SoundManager>();
         }
 
         private void OnInputEvent(InputEventPtr eventPtr, InputDevice device)
@@ -158,6 +162,7 @@ namespace Game.WinCondition
 
             _container?.SetActive(true);
             _hintText?.SetActive(false);
+            _soundManager?.StopAllSounds();
             _audioSource?.Play();
 
             foreach (var entry in _images)

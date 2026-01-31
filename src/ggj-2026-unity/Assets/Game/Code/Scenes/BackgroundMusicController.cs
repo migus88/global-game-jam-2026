@@ -135,8 +135,6 @@ namespace Game.Scenes
 
         private void OnPlayerWon(PlayerWonEvent evt)
         {
-            _musicSource?.Stop();
-            _soundManager?.StopAllSounds();
         }
 
         private void InitializeShuffleList()
