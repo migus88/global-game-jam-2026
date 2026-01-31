@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using Game.Events;
 using Game.GameState;
 using Game.Scenes.Events;
+using Migs.MLock.Interfaces;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using VContainer;
@@ -23,6 +24,7 @@ namespace Game.Scenes
         private SceneInstance _currentMainMenuScene;
 
         private bool _isTransitioning;
+        private ILock<GameLockTags> _currentLock;
 
         [Inject]
         public void Construct(
@@ -111,7 +113,7 @@ namespace Game.Scenes
 
             try
             {
-                _gameLockService?.Lock(this, GameLockTags.All);
+                _currentLock = _gameLockService?.LockAll();
 
                 _eventAggregator?.Publish(new LoadingStartedEvent(isTransitioningToGame: true));
 
@@ -136,14 +138,16 @@ namespace Game.Scenes
 
                 await UniTask.Delay(100);
 
-                _gameLockService?.Unlock(this, GameLockTags.All);
+                _currentLock?.Dispose();
+                _currentLock = null;
 
                 _eventAggregator?.Publish(new GameSceneReadyEvent());
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Failed to start game: {ex.Message}");
-                _gameLockService?.Unlock(this, GameLockTags.All);
+                _currentLock?.Dispose();
+                _currentLock = null;
             }
             finally
             {
@@ -157,7 +161,7 @@ namespace Game.Scenes
 
             try
             {
-                _gameLockService?.Lock(this, GameLockTags.All);
+                _currentLock = _gameLockService?.LockAll();
 
                 _eventAggregator?.Publish(new LoadingStartedEvent(isTransitioningToGame: false));
 
@@ -180,14 +184,16 @@ namespace Game.Scenes
 
                 _eventAggregator?.Publish(new LoadingCompletedEvent(isInGame: false));
 
-                _gameLockService?.Unlock(this, GameLockTags.All);
+                _currentLock?.Dispose();
+                _currentLock = null;
 
                 _eventAggregator?.Publish(new MainMenuReadyEvent());
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Failed to return to main menu: {ex.Message}");
-                _gameLockService?.Unlock(this, GameLockTags.All);
+                _currentLock?.Dispose();
+                _currentLock = null;
             }
             finally
             {

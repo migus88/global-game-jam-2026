@@ -4,6 +4,8 @@ using Game.GameState.Events;
 using Game.Scenes;
 using Game.Scenes.Events;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using VContainer;
 using VContainer.Unity;
 
@@ -40,6 +42,16 @@ namespace Game.GameState
             _eventAggregator?.Subscribe<GameOverEvent>(OnGameOver);
         }
 
+        private void OnEnable()
+        {
+            InputSystem.onEvent += OnInputEvent;
+        }
+
+        private void OnDisable()
+        {
+            InputSystem.onEvent -= OnInputEvent;
+        }
+
         private void ResolveDependenciesIfNeeded()
         {
             if (_eventAggregator != null && _sceneConfiguration != null)
@@ -58,14 +70,19 @@ namespace Game.GameState
             _sceneConfiguration ??= lifetimeScope.Container.Resolve<SceneConfiguration>();
         }
 
-        private void Update()
+        private void OnInputEvent(InputEventPtr eventPtr, InputDevice device)
         {
             if (!_canReturnToMenu)
             {
                 return;
             }
 
-            if (Input.anyKeyDown)
+            if (!eventPtr.IsA<StateEvent>() && !eventPtr.IsA<DeltaStateEvent>())
+            {
+                return;
+            }
+
+            if (eventPtr.HasButtonPress())
             {
                 _canReturnToMenu = false;
                 _isGameOver = false;
