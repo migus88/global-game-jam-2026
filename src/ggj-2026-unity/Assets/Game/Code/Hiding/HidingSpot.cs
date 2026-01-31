@@ -1,5 +1,6 @@
 using Game.Events;
 using Game.Hiding.Events;
+using Game.Input;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using VContainer;
@@ -27,8 +28,14 @@ namespace Game.Hiding
         [SerializeField, Header("Hint Display")]
         private SpriteRenderer _hintRenderer;
 
+        [SerializeField]
+        private ButtonSpriteDisplay _buttonSpriteDisplay;
+
         [SerializeField, Header("Input")]
         private InputActionReference _hideActionReference;
+
+        [SerializeField]
+        private ButtonMappingConfig _buttonMappingConfig;
 
         private EventAggregator _eventAggregator;
         private HideConfiguration _configuration;
@@ -118,13 +125,36 @@ namespace Game.Hiding
 
         private void InitializeHintDisplay()
         {
-            if (_hintRenderer != null)
+            if (_hintRenderer == null)
             {
-                _hintRenderer.gameObject.SetActive(false);
+                Debug.LogWarning($"[HidingSpot] No hint renderer assigned on {gameObject.name}");
                 return;
             }
 
-            Debug.LogWarning($"[HidingSpot] No hint renderer assigned on {gameObject.name}");
+            _hintRenderer.gameObject.SetActive(false);
+
+            if (_buttonSpriteDisplay == null)
+            {
+                _buttonSpriteDisplay = _hintRenderer.GetComponent<ButtonSpriteDisplay>();
+            }
+
+            if (_buttonSpriteDisplay != null)
+            {
+                _buttonSpriteDisplay.SetAction(_hideActionReference);
+
+                if (_buttonMappingConfig != null)
+                {
+                    _buttonSpriteDisplay.SetMappingConfig(_buttonMappingConfig);
+                }
+            }
+            else if (_buttonMappingConfig != null && _hideActionReference != null)
+            {
+                var sprite = _buttonMappingConfig.GetCurrentSprite(_hideActionReference);
+                if (sprite != null)
+                {
+                    _hintRenderer.sprite = sprite;
+                }
+            }
         }
 
         private void Update()
