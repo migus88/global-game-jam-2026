@@ -52,6 +52,7 @@ namespace Game.Scenes
 
             _eventAggregator?.Subscribe<LoadingCompletedEvent>(OnLoadingCompleted);
             _eventAggregator?.Subscribe<MainMenuReadyEvent>(OnMainMenuReady);
+            _eventAggregator?.Subscribe<PlayerWonEvent>(OnPlayerWon);
 
             SetVolume(_sceneConfiguration?.MainMenuMusicVolume ?? 0.3f);
             PlayNextTrack();
@@ -89,6 +90,7 @@ namespace Game.Scenes
         {
             _eventAggregator?.Unsubscribe<LoadingCompletedEvent>(OnLoadingCompleted);
             _eventAggregator?.Unsubscribe<MainMenuReadyEvent>(OnMainMenuReady);
+            _eventAggregator?.Unsubscribe<PlayerWonEvent>(OnPlayerWon);
         }
 
         private void OnLoadingCompleted(LoadingCompletedEvent evt)
@@ -129,6 +131,12 @@ namespace Game.Scenes
             var duration = _sceneConfiguration?.MusicTransitionDuration ?? 1f;
 
             TransitionVolumeAsync(targetVolume, duration).Forget();
+        }
+
+        private void OnPlayerWon(PlayerWonEvent evt)
+        {
+            _musicSource?.Stop();
+            _soundManager?.StopAllSounds();
         }
 
         private void InitializeShuffleList()

@@ -91,6 +91,24 @@ namespace Game.Sound
             _backgroundMusicSource.Stop();
         }
 
+        public void StopAllSounds()
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            foreach (var source in _audioSourcePool)
+            {
+                if (source != null && source.isPlaying)
+                {
+                    source.Stop();
+                    source.clip = null;
+                    source.gameObject.SetActive(false);
+                }
+            }
+        }
+
         public void SetBackgroundMusicVolume(float volume)
         {
             if (_isDisposed)

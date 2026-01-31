@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Game.Events;
+using Game.GameState;
 using Game.Scenes;
 using Game.Scenes.Events;
+using Migs.MLock.Interfaces;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
@@ -49,15 +51,18 @@ namespace Game.WinCondition
         private float _hintDelay = 3f;
 
         private EventAggregator _eventAggregator;
+        private GameLockService _lockService;
 
         private bool _isWin;
         private bool _canReturnToMenu;
         private CancellationTokenSource _animationCts;
+        private ILock<GameLockTags> _inputLock;
 
         [Inject]
-        public void Construct(EventAggregator eventAggregator)
+        public void Construct(EventAggregator eventAggregator, GameLockService lockService)
         {
             _eventAggregator = eventAggregator;
+            _lockService = lockService;
         }
 
         private void Start()
@@ -82,7 +87,7 @@ namespace Game.WinCondition
 
         private void ResolveDependenciesIfNeeded()
         {
-            if (_eventAggregator != null)
+            if (_eventAggregator != null && _lockService != null)
             {
                 return;
             }
@@ -95,6 +100,7 @@ namespace Game.WinCondition
             }
 
             _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
+            _lockService ??= lifetimeScope.Container.Resolve<GameLockService>();
         }
 
         private void OnInputEvent(InputEventPtr eventPtr, InputDevice device)
@@ -134,6 +140,8 @@ namespace Game.WinCondition
         {
             _isWin = true;
             _canReturnToMenu = false;
+
+            _inputLock = _lockService?.LockAll();
 
             ShowAnimatedAsync().Forget();
         }
@@ -259,6 +267,9 @@ namespace Game.WinCondition
             _hintText?.SetActive(false);
             _audioSource?.Stop();
             SetAllImagesAlpha(0f);
+
+            _inputLock?.Dispose();
+            _inputLock = null;
         }
     }
 }
