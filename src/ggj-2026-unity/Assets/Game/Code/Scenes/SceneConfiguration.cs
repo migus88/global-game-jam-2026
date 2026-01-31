@@ -20,5 +20,15 @@ namespace Game.Scenes
         [Header("Game Over Settings")]
         [field: SerializeField, Range(0.5f, 10f), Tooltip("Delay before showing hint text after game over")]
         public float GameOverHintDelay { get; private set; } = 3f;
+
+        [Header("Music Settings")]
+        [field: SerializeField, Range(0f, 1f), Tooltip("Music volume during main menu")]
+        public float MainMenuMusicVolume { get; private set; } = 0.3f;
+
+        [field: SerializeField, Range(0f, 1f), Tooltip("Music volume during gameplay")]
+        public float GameplayMusicVolume { get; private set; } = 0.6f;
+
+        [field: SerializeField, Range(0.1f, 3f), Tooltip("Duration of volume transition")]
+        public float MusicTransitionDuration { get; private set; } = 1f;
     }
 }

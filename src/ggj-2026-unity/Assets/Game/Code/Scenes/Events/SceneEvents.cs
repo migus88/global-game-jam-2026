@@ -8,10 +8,22 @@ namespace Game.Scenes.Events
 
     public readonly struct LoadingStartedEvent : IEvent
     {
+        public bool IsTransitioningToGame { get; }
+
+        public LoadingStartedEvent(bool isTransitioningToGame)
+        {
+            IsTransitioningToGame = isTransitioningToGame;
+        }
     }
 
     public readonly struct LoadingCompletedEvent : IEvent
     {
+        public bool IsInGame { get; }
+
+        public LoadingCompletedEvent(bool isInGame)
+        {
+            IsInGame = isInGame;
+        }
     }
 
     public readonly struct ReturnToMainMenuRequestedEvent : IEvent
@@ -29,6 +41,10 @@ namespace Game.Scenes.Events
     }
 
     public readonly struct GameSceneReadyEvent : IEvent
+    {
+    }
+
+    public readonly struct MainMenuReadyEvent : IEvent
     {
     }
 }

@@ -56,11 +56,15 @@ namespace Game.Scenes
                 return;
             }
 
+            GameSceneManager.Instance?.RegisterLoadingScene(loadingScene);
+
             var mainMenuScene = await _sceneLoader.LoadMainMenuSceneAsync();
 
             if (mainMenuScene.Scene.IsValid())
             {
+                GameSceneManager.Instance?.RegisterMainMenuScene(mainMenuScene);
                 _eventAggregator?.Publish(new SceneLoadedEvent(mainMenuScene.Scene.name));
+                _eventAggregator?.Publish(new MainMenuReadyEvent());
             }
 
             Debug.Log("GameBootstrap: Game initialized successfully");

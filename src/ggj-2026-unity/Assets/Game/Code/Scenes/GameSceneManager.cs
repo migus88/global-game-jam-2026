@@ -113,9 +113,7 @@ namespace Game.Scenes
             {
                 _gameLockService?.Lock(this, GameLockTags.All);
 
-                _currentLoadingScene = await _sceneLoader.LoadLoadingSceneAsync();
-
-                _eventAggregator?.Publish(new LoadingStartedEvent());
+                _eventAggregator?.Publish(new LoadingStartedEvent(isTransitioningToGame: true));
 
                 await UniTask.Delay(100);
 
@@ -134,7 +132,7 @@ namespace Game.Scenes
 
                 await UniTask.Delay(100);
 
-                _eventAggregator?.Publish(new LoadingCompletedEvent());
+                _eventAggregator?.Publish(new LoadingCompletedEvent(isInGame: true));
 
                 await UniTask.Delay(100);
 
@@ -161,7 +159,7 @@ namespace Game.Scenes
             {
                 _gameLockService?.Lock(this, GameLockTags.All);
 
-                _eventAggregator?.Publish(new LoadingStartedEvent());
+                _eventAggregator?.Publish(new LoadingStartedEvent(isTransitioningToGame: false));
 
                 await UniTask.Delay(100);
 
@@ -180,9 +178,11 @@ namespace Game.Scenes
 
                 await UniTask.Delay(100);
 
-                _eventAggregator?.Publish(new LoadingCompletedEvent());
+                _eventAggregator?.Publish(new LoadingCompletedEvent(isInGame: false));
 
                 _gameLockService?.Unlock(this, GameLockTags.All);
+
+                _eventAggregator?.Publish(new MainMenuReadyEvent());
             }
             catch (Exception ex)
             {
@@ -195,32 +195,14 @@ namespace Game.Scenes
             }
         }
 
-        public async UniTask LoadMainMenuAsync()
+        public void RegisterMainMenuScene(SceneInstance mainMenuScene)
         {
-            if (_isTransitioning)
-            {
-                return;
-            }
+            _currentMainMenuScene = mainMenuScene;
+        }
 
-            _isTransitioning = true;
-
-            try
-            {
-                _currentMainMenuScene = await _sceneLoader.LoadMainMenuSceneAsync();
-
-                if (_currentMainMenuScene.Scene.IsValid())
-                {
-                    _eventAggregator?.Publish(new SceneLoadedEvent(_currentMainMenuScene.Scene.name));
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Failed to load main menu: {ex.Message}");
-            }
-            finally
-            {
-                _isTransitioning = false;
-            }
+        public void RegisterLoadingScene(SceneInstance loadingScene)
+        {
+            _currentLoadingScene = loadingScene;
         }
     }
 }
