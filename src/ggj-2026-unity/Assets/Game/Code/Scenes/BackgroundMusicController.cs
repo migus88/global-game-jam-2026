@@ -14,6 +14,7 @@ namespace Game.Scenes
         private EventAggregator _eventAggregator;
         private SceneConfiguration _sceneConfiguration;
         private SoundConfiguration _soundConfiguration;
+        private SoundManager _soundManager;
 
         private AudioSource _musicSource;
         private List<int> _shuffledIndices;
@@ -25,11 +26,13 @@ namespace Game.Scenes
         public void Construct(
             EventAggregator eventAggregator,
             SceneConfiguration sceneConfiguration,
-            SoundConfiguration soundConfiguration)
+            SoundConfiguration soundConfiguration,
+            SoundManager soundManager)
         {
             _eventAggregator = eventAggregator;
             _sceneConfiguration = sceneConfiguration;
             _soundConfiguration = soundConfiguration;
+            _soundManager = soundManager;
         }
 
         private void Awake()
@@ -56,7 +59,7 @@ namespace Game.Scenes
 
         private void ResolveDependenciesIfNeeded()
         {
-            if (_eventAggregator != null && _sceneConfiguration != null && _soundConfiguration != null)
+            if (_eventAggregator != null && _sceneConfiguration != null && _soundConfiguration != null && _soundManager != null)
             {
                 return;
             }
@@ -71,6 +74,7 @@ namespace Game.Scenes
             _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
             _sceneConfiguration ??= lifetimeScope.Container.Resolve<SceneConfiguration>();
             _soundConfiguration ??= lifetimeScope.Container.Resolve<SoundConfiguration>();
+            _soundManager ??= lifetimeScope.Container.Resolve<SoundManager>();
         }
 
         private void Update()
@@ -114,7 +118,7 @@ namespace Game.Scenes
                 return;
             }
 
-            AudioSource.PlayClipAtPoint(introClip, Vector3.zero);
+            _soundManager?.PlayClip2D(introClip);
         }
 
         private void OnMainMenuReady(MainMenuReadyEvent evt)
