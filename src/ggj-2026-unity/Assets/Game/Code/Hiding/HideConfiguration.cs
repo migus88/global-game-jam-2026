@@ -17,15 +17,6 @@ namespace Game.Hiding
         [field: SerializeField, Header("Cooldown")]
         public float HideCooldown { get; private set; } = 0.5f;
 
-        [field: SerializeField, Header("Hint Display")]
-        public Sprite HintButtonSprite { get; private set; }
-
-        [field: SerializeField]
-        public float HintSize { get; private set; } = 0.5f;
-
-        [field: SerializeField]
-        public Color HintColor { get; private set; } = Color.white;
-
         [field: SerializeField, Header("Hidden Duration Sound")]
         public float HiddenDurationThreshold { get; private set; } = 5f;
 
