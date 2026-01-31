@@ -4,6 +4,7 @@ using Game.Conversation.Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace Game.Conversation
@@ -25,6 +26,12 @@ namespace Game.Conversation
         [SerializeField]
         private TextMeshProUGUI[] _answerTexts;
 
+        [SerializeField, Header("Input")]
+        private InputActionReference _navigateAction;
+
+        private int _activeAnswerCount;
+        private bool _answersEnabled;
+
         public event Action<int> AnswerSelected;
 
         private void Awake()
@@ -33,13 +40,64 @@ namespace Game.Conversation
             Hide();
         }
 
+        private void OnEnable()
+        {
+            if (_navigateAction != null && _navigateAction.action != null)
+            {
+                _navigateAction.action.performed += OnNavigatePerformed;
+                _navigateAction.action.Enable();
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (_navigateAction != null && _navigateAction.action != null)
+            {
+                _navigateAction.action.performed -= OnNavigatePerformed;
+            }
+        }
+
+        private void OnNavigatePerformed(InputAction.CallbackContext context)
+        {
+            if (!_answersEnabled || _activeAnswerCount == 0)
+            {
+                return;
+            }
+
+            var eventSystem = EventSystem.current;
+            if (eventSystem == null || eventSystem.currentSelectedGameObject != null)
+            {
+                return;
+            }
+
+            // Re-select first interactable button when controller navigates with nothing selected
+            for (int i = 0; i < _activeAnswerCount; i++)
+            {
+                if (_answerButtons[i].interactable)
+                {
+                    eventSystem.SetSelectedGameObject(_answerButtons[i].gameObject);
+                    break;
+                }
+            }
+        }
+
         private void SetupButtons()
         {
             for (int i = 0; i < _answerButtons.Length; i++)
             {
                 int index = i;
                 _answerButtons[i].onClick.AddListener(() => OnAnswerClicked(index));
+
+                var trigger = _answerButtons[i].gameObject.AddComponent<EventTrigger>();
+                var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+                entry.callback.AddListener(_ => OnPointerEnterButton());
+                trigger.triggers.Add(entry);
             }
+        }
+
+        private void OnPointerEnterButton()
+        {
+            EventSystem.current?.SetSelectedGameObject(null);
         }
 
         private void OnDestroy()
@@ -50,26 +108,24 @@ namespace Game.Conversation
             }
         }
 
-        public void ShowQuestionText(string text)
+        public void ShowQuestion(ConversationQuestion question)
         {
             _container?.SetActive(true);
-            _answersContainer?.SetActive(false);
+            _answersContainer?.SetActive(true);
 
             if (_dialogueText != null)
             {
-                _dialogueText.text = text;
+                _dialogueText.text = question.Text;
             }
-        }
 
-        public void ShowAnswers(ConversationQuestion question)
-        {
-            _answersContainer?.SetActive(true);
+            _activeAnswerCount = Mathf.Min(question.Answers.Length, _answerButtons.Length);
 
             for (int i = 0; i < _answerButtons.Length; i++)
             {
                 if (i < question.Answers.Length)
                 {
                     _answerButtons[i].gameObject.SetActive(true);
+                    _answerButtons[i].interactable = false;
 
                     if (_answerTexts[i] != null)
                     {
@@ -81,47 +137,55 @@ namespace Game.Conversation
                     _answerButtons[i].gameObject.SetActive(false);
                 }
             }
+        }
+
+        public void EnableAnswers()
+        {
+            _answersEnabled = true;
+
+            for (int i = 0; i < _activeAnswerCount; i++)
+            {
+                _answerButtons[i].interactable = true;
+            }
 
             SelectFirstAnswerAsync().Forget();
         }
 
         private async UniTaskVoid SelectFirstAnswerAsync()
         {
-            // Wait for end of frame for UI layout to complete
             await UniTask.WaitForEndOfFrame();
 
-            if (_answerButtons.Length == 0 || !_answerButtons[0].gameObject.activeSelf)
+            if (_answerButtons.Length == 0 || !_answerButtons[0].gameObject.activeSelf || !_answerButtons[0].interactable)
             {
-                Debug.LogWarning("[ConversationUI] No answer buttons available to select");
                 return;
             }
 
-            var button = _answerButtons[0];
             var eventSystem = EventSystem.current;
-
             if (eventSystem == null)
             {
-                Debug.LogError("[ConversationUI] No EventSystem found!");
                 return;
             }
 
-            // Clear current selection first
-            eventSystem.SetSelectedGameObject(null);
-
-            // Wait another frame
-            await UniTask.Yield();
-
-            // Now select the button
-            eventSystem.SetSelectedGameObject(button.gameObject);
-            button.Select();
-
-            Debug.Log($"[ConversationUI] Selected button: {button.name}, Current: {eventSystem.currentSelectedGameObject?.name}");
+            eventSystem.SetSelectedGameObject(_answerButtons[0].gameObject);
         }
 
-        public void ShowQuestion(ConversationQuestion question)
+        public void ShowSelectedAnswerOnly(int selectedIndex)
         {
-            ShowQuestionText(question.Text);
-            ShowAnswers(question);
+            _answersEnabled = false;
+
+            for (int i = 0; i < _answerButtons.Length; i++)
+            {
+                if (i == selectedIndex)
+                {
+                    _answerButtons[i].interactable = false;
+                }
+                else
+                {
+                    _answerButtons[i].gameObject.SetActive(false);
+                }
+            }
+
+            EventSystem.current?.SetSelectedGameObject(null);
         }
 
         public void ShowResponse(ConversationResponse response)
@@ -141,6 +205,7 @@ namespace Game.Conversation
 
         public void Hide()
         {
+            _answersEnabled = false;
             _container?.SetActive(false);
         }
 

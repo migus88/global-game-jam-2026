@@ -127,18 +127,18 @@ namespace Game.Conversation
                 Debug.LogError("[ConversationManager] ConversationUI is not assigned!");
             }
 
-            // Show question text first
-            _conversationUI?.ShowQuestionText(_currentQuestion.Text);
+            // Show question with disabled answers
+            _conversationUI?.ShowQuestion(_currentQuestion);
 
-            // Play audio and wait for it to finish before showing answers
+            // Play audio and wait for it to finish
             if (_currentQuestion.AudioClip != null)
             {
                 _soundManager?.PlayClip2D(_currentQuestion.AudioClip);
                 await UniTask.Delay(TimeSpan.FromSeconds(_currentQuestion.AudioClip.length));
             }
 
-            // Now show the answer buttons
-            _conversationUI?.ShowAnswers(_currentQuestion);
+            // Enable answer buttons after audio finishes
+            _conversationUI?.EnableAnswers();
         }
 
         private void OnAnswerSelected(int answerIndex)
@@ -152,6 +152,9 @@ namespace Game.Conversation
             {
                 return;
             }
+
+            // Show only the selected answer (disabled)
+            _conversationUI?.ShowSelectedAnswerOnly(answerIndex);
 
             var answer = _currentQuestion.Answers[answerIndex];
             HandleAnswer(answer.IsCorrect).Forget();
