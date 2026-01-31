@@ -98,6 +98,23 @@ namespace Game.Scenes
             var duration = _sceneConfiguration?.MusicTransitionDuration ?? 1f;
 
             TransitionVolumeAsync(targetVolume, duration).Forget();
+
+            if (_isInGame)
+            {
+                PlayIntroSound();
+            }
+        }
+
+        private void PlayIntroSound()
+        {
+            var introClip = _soundConfiguration?.IntroSound;
+
+            if (introClip == null)
+            {
+                return;
+            }
+
+            AudioSource.PlayClipAtPoint(introClip, Vector3.zero);
         }
 
         private void OnMainMenuReady(MainMenuReadyEvent evt)
