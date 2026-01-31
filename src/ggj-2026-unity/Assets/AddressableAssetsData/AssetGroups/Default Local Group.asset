@@ -15,6 +15,11 @@ MonoBehaviour:
   m_GroupName: Default Local Group
   m_GUID: 560ecfee01ea7407fb1a586aaed02b0d
   m_SerializeEntries:
+  - m_GUID: 275e0f5f95c084bcc892c9db0178f37e
+    m_Address: Assets/Game/Scenes/MainMenu.unity
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 3cc1b3def73e64377815bdb2b6089dad
     m_Address: Player
     m_ReadOnly: 0
@@ -32,6 +37,17 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a389e4e04ad14472b9e1500b8e4cc695
     m_Address: Robot
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a55e4ead6756a407d9e653258174d86d
+    m_Address: Assets/Game/Scenes/City.unity
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Level
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: be08177671e064c1d816c209d824a46e
+    m_Address: Assets/Game/Scenes/Loading.unity
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
