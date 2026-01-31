@@ -46,6 +46,14 @@ Shader "Game/WaterCircle"
             ZWrite Off
             Cull Back
 
+            // Stencil buffer to prevent overlapping water planes from double-rendering
+            Stencil
+            {
+                Ref 1
+                Comp NotEqual
+                Pass Replace
+            }
+
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -7,10 +8,15 @@ namespace Game.Editor
     public class MeshCombiner : EditorWindow
     {
         private const string CombinedMeshName = "CombinedMesh";
-        private const float VertexTolerance = 0.0001f;
-        private const float NormalTolerance = 0.001f;
+        private const float Tolerance = 0.001f;
 
-        private bool _removeOverlaps = true;
+        private enum CombineMode
+        {
+            Simple,
+            MergeCoplanarPlanes
+        }
+
+        private CombineMode _combineMode = CombineMode.MergeCoplanarPlanes;
 
         [MenuItem("Tools/Mesh Combiner")]
         public static void ShowWindow()
@@ -24,12 +30,13 @@ namespace Game.Editor
             EditorGUILayout.Space();
 
             EditorGUILayout.HelpBox(
-                "Select multiple GameObjects with MeshFilter components in the Hierarchy, then click Combine.",
+                "Select multiple GameObjects with MeshFilter components (quads/planes), then click Combine.\n\n" +
+                "Merge Coplanar Planes: Merges overlapping coplanar quads into a single unified shape.",
                 MessageType.Info);
 
             EditorGUILayout.Space();
 
-            _removeOverlaps = EditorGUILayout.Toggle("Remove Overlapping Triangles", _removeOverlaps);
+            _combineMode = (CombineMode)EditorGUILayout.EnumPopup("Combine Mode", _combineMode);
 
             EditorGUILayout.Space();
 
@@ -41,7 +48,7 @@ namespace Game.Editor
             EditorGUI.BeginDisabledGroup(selectedCount < 2);
             if (GUILayout.Button("Combine Selected Meshes"))
             {
-                CombineSelectedMeshes(_removeOverlaps);
+                CombineSelectedMeshes();
             }
             EditorGUI.EndDisabledGroup();
         }
@@ -58,6 +65,7 @@ namespace Game.Editor
             foreach (var go in Selection.gameObjects)
             {
                 var meshFilter = go.GetComponent<MeshFilter>();
+
                 if (meshFilter != null && meshFilter.sharedMesh != null)
                 {
                     meshFilters.Add(meshFilter);
@@ -67,7 +75,7 @@ namespace Game.Editor
             return meshFilters;
         }
 
-        private static void CombineSelectedMeshes(bool removeOverlaps)
+        private void CombineSelectedMeshes()
         {
             var meshFilters = GetSelectedMeshFilters();
 
@@ -82,13 +90,20 @@ namespace Game.Editor
 
             Mesh combinedMesh;
 
-            if (removeOverlaps)
+            switch (_combineMode)
             {
-                combinedMesh = CombineMeshesWithOverlapRemoval(meshFilters);
+                case CombineMode.MergeCoplanarPlanes:
+                    combinedMesh = MergeCoplanarPlanes(meshFilters);
+                    break;
+                default:
+                    combinedMesh = CombineMeshesSimple(meshFilters);
+                    break;
             }
-            else
+
+            if (combinedMesh == null)
             {
-                combinedMesh = CombineMeshesSimple(meshFilters);
+                EditorUtility.DisplayDialog("Mesh Combiner", "Failed to combine meshes.", "OK");
+                return;
             }
 
             var combinedObject = new GameObject(CombinedMeshName);
@@ -127,181 +142,357 @@ namespace Game.Editor
             return combinedMesh;
         }
 
-        private static Mesh CombineMeshesWithOverlapRemoval(List<MeshFilter> meshFilters)
+        private static Mesh MergeCoplanarPlanes(List<MeshFilter> meshFilters)
         {
-            // Collect all triangles from all meshes in world space
-            var allTriangles = new List<Triangle>();
+            // Extract quads from meshes (assuming each mesh is a quad/plane)
+            var allQuads = new List<Quad>();
 
             foreach (var mf in meshFilters)
             {
-                var mesh = mf.sharedMesh;
-                var transform = mf.transform.localToWorldMatrix;
+                var quad = ExtractQuadFromMesh(mf);
 
-                var vertices = mesh.vertices;
-                var normals = mesh.normals;
-                var triangles = mesh.triangles;
-                var uvs = mesh.uv;
-
-                for (var i = 0; i < triangles.Length; i += 3)
+                if (quad != null)
                 {
-                    var v0 = transform.MultiplyPoint3x4(vertices[triangles[i]]);
-                    var v1 = transform.MultiplyPoint3x4(vertices[triangles[i + 1]]);
-                    var v2 = transform.MultiplyPoint3x4(vertices[triangles[i + 2]]);
-
-                    var n0 = normals.Length > triangles[i] ? transform.MultiplyVector(normals[triangles[i]]).normalized : Vector3.up;
-                    var n1 = normals.Length > triangles[i + 1] ? transform.MultiplyVector(normals[triangles[i + 1]]).normalized : Vector3.up;
-                    var n2 = normals.Length > triangles[i + 2] ? transform.MultiplyVector(normals[triangles[i + 2]]).normalized : Vector3.up;
-
-                    var uv0 = uvs.Length > triangles[i] ? uvs[triangles[i]] : Vector2.zero;
-                    var uv1 = uvs.Length > triangles[i + 1] ? uvs[triangles[i + 1]] : Vector2.zero;
-                    var uv2 = uvs.Length > triangles[i + 2] ? uvs[triangles[i + 2]] : Vector2.zero;
-
-                    allTriangles.Add(new Triangle(v0, v1, v2, n0, n1, n2, uv0, uv1, uv2));
+                    allQuads.Add(quad);
                 }
             }
 
-            // Remove overlapping triangles
-            var filteredTriangles = RemoveOverlappingTriangles(allTriangles);
+            if (allQuads.Count < 2)
+            {
+                Debug.LogWarning("Need at least 2 valid quads to merge");
+                return CombineMeshesSimple(meshFilters);
+            }
 
-            // Build the final mesh
-            return BuildMeshFromTriangles(filteredTriangles);
+            // Group quads by plane (coplanar quads)
+            var planeGroups = GroupByPlane(allQuads);
+
+            var allVertices = new List<Vector3>();
+            var allNormals = new List<Vector3>();
+            var allUvs = new List<Vector2>();
+            var allIndices = new List<int>();
+
+            foreach (var group in planeGroups)
+            {
+                if (group.Count == 1)
+                {
+                    // Single quad, just add it
+                    AddQuadToMesh(group[0], allVertices, allNormals, allUvs, allIndices);
+                }
+                else
+                {
+                    // Multiple coplanar quads - merge them
+                    var mergedPolygon = MergeCoplanarQuads(group);
+                    AddPolygonToMesh(mergedPolygon, group[0].Normal, allVertices, allNormals, allUvs, allIndices);
+                }
+            }
+
+            var mesh = new Mesh();
+            mesh.name = CombinedMeshName;
+            mesh.SetVertices(allVertices);
+            mesh.SetNormals(allNormals);
+            mesh.SetUVs(0, allUvs);
+            mesh.SetTriangles(allIndices, 0);
+            mesh.RecalculateBounds();
+
+            return mesh;
         }
 
-        private static List<Triangle> RemoveOverlappingTriangles(List<Triangle> triangles)
+        private static Quad ExtractQuadFromMesh(MeshFilter mf)
         {
-            var result = new List<Triangle>();
-            var removed = new HashSet<int>();
+            var mesh = mf.sharedMesh;
+            var transform = mf.transform.localToWorldMatrix;
 
-            for (var i = 0; i < triangles.Count; i++)
+            var vertices = mesh.vertices;
+
+            if (vertices.Length < 3)
             {
-                if (removed.Contains(i))
+                return null;
+            }
+
+            // Transform vertices to world space
+            var worldVerts = new List<Vector3>();
+
+            foreach (var v in vertices)
+            {
+                worldVerts.Add(transform.MultiplyPoint3x4(v));
+            }
+
+            // Get unique vertices (remove duplicates from triangle mesh)
+            var uniqueVerts = GetUniqueVertices(worldVerts);
+
+            if (uniqueVerts.Count < 3)
+            {
+                return null;
+            }
+
+            // Calculate normal
+            var normal = Vector3.Cross(uniqueVerts[1] - uniqueVerts[0], uniqueVerts[2] - uniqueVerts[0]).normalized;
+
+            // Sort vertices in winding order
+            var sortedVerts = SortVerticesInWindingOrder(uniqueVerts, normal);
+
+            return new Quad
+            {
+                Vertices = sortedVerts,
+                Normal = normal
+            };
+        }
+
+        private static List<Vector3> GetUniqueVertices(List<Vector3> vertices)
+        {
+            var unique = new List<Vector3>();
+
+            foreach (var v in vertices)
+            {
+                var isDuplicate = false;
+
+                foreach (var u in unique)
+                {
+                    if ((v - u).sqrMagnitude < Tolerance * Tolerance)
+                    {
+                        isDuplicate = true;
+                        break;
+                    }
+                }
+
+                if (!isDuplicate)
+                {
+                    unique.Add(v);
+                }
+            }
+
+            return unique;
+        }
+
+        private static List<Vector3> SortVerticesInWindingOrder(List<Vector3> vertices, Vector3 normal)
+        {
+            if (vertices.Count < 3)
+            {
+                return vertices;
+            }
+
+            // Calculate center
+            var center = Vector3.zero;
+
+            foreach (var v1 in vertices)
+            {
+                center += v1;
+            }
+
+            center /= vertices.Count;
+
+            // Create basis vectors for the plane
+            GetPlaneBasis(normal, out var u, out var v);
+
+            // Sort by angle around center
+            var sorted = vertices.OrderBy(vert =>
+            {
+                var dir = vert - center;
+                var x = Vector3.Dot(dir, u);
+                var y = Vector3.Dot(dir, v);
+                return Mathf.Atan2(y, x);
+            }).ToList();
+
+            return sorted;
+        }
+
+        private static List<List<Quad>> GroupByPlane(List<Quad> quads)
+        {
+            var groups = new List<List<Quad>>();
+            var assigned = new bool[quads.Count];
+
+            for (var i = 0; i < quads.Count; i++)
+            {
+                if (assigned[i])
                 {
                     continue;
                 }
 
-                var triA = triangles[i];
-                var isDuplicate = false;
+                var group = new List<Quad> { quads[i] };
+                assigned[i] = true;
 
-                for (var j = i + 1; j < triangles.Count; j++)
+                for (var j = i + 1; j < quads.Count; j++)
                 {
-                    if (removed.Contains(j))
+                    if (assigned[j])
                     {
                         continue;
                     }
 
-                    var triB = triangles[j];
-
-                    if (AreTrianglesOverlapping(triA, triB))
+                    if (AreCoplanar(quads[i], quads[j]))
                     {
-                        // Mark the second one as removed (keep the first)
-                        removed.Add(j);
-                        isDuplicate = true;
+                        group.Add(quads[j]);
+                        assigned[j] = true;
                     }
                 }
 
-                if (!isDuplicate || !removed.Contains(i))
-                {
-                    result.Add(triA);
-                }
+                groups.Add(group);
             }
 
-            var removedCount = triangles.Count - result.Count;
+            return groups;
+        }
 
-            if (removedCount > 0)
+        private static bool AreCoplanar(Quad a, Quad b)
+        {
+            // Check if normals are parallel
+            var normalDot = Mathf.Abs(Vector3.Dot(a.Normal, b.Normal));
+
+            if (normalDot < 1f - Tolerance)
             {
-                Debug.Log($"Removed {removedCount} overlapping triangles");
+                return false;
+            }
+
+            // Check if on same plane (distance from a's plane to b's center is ~0)
+            var centerA = GetCenter(a.Vertices);
+            var centerB = GetCenter(b.Vertices);
+            var planeDistance = Mathf.Abs(Vector3.Dot(a.Normal, centerB - centerA));
+
+            return planeDistance < Tolerance;
+        }
+
+        private static Vector3 GetCenter(List<Vector3> vertices)
+        {
+            var center = Vector3.zero;
+
+            foreach (var v in vertices)
+            {
+                center += v;
+            }
+
+            return center / vertices.Count;
+        }
+
+        private static List<Vector3> MergeCoplanarQuads(List<Quad> quads)
+        {
+            if (quads.Count == 0)
+            {
+                return new List<Vector3>();
+            }
+
+            var normal = quads[0].Normal;
+            GetPlaneBasis(normal, out var u, out var v);
+
+            // Project all quads to 2D
+            var polygons2D = new List<List<Vector2>>();
+
+            foreach (var quad in quads)
+            {
+                var poly2D = new List<Vector2>();
+
+                foreach (var vert in quad.Vertices)
+                {
+                    poly2D.Add(ProjectToPlane(vert, u, v));
+                }
+
+                polygons2D.Add(poly2D);
+            }
+
+            // Compute union of all 2D polygons
+            var unionPolygon = ComputePolygonUnion(polygons2D);
+
+            // Project back to 3D
+            var planeOrigin = GetCenter(quads[0].Vertices);
+            var result = new List<Vector3>();
+
+            foreach (var p in unionPolygon)
+            {
+                var point3D = planeOrigin + u * p.x + v * p.y;
+
+                // Adjust to be on the actual plane
+                var offset = Vector3.Dot(point3D - planeOrigin, normal);
+                point3D -= normal * offset;
+
+                result.Add(point3D);
             }
 
             return result;
         }
 
-        private static bool AreTrianglesOverlapping(Triangle a, Triangle b)
+        private static List<Vector2> ComputePolygonUnion(List<List<Vector2>> polygons)
         {
-            // Check if triangles are coplanar (same plane)
-            var normalA = Vector3.Cross(a.V1 - a.V0, a.V2 - a.V0).normalized;
-            var normalB = Vector3.Cross(b.V1 - b.V0, b.V2 - b.V0).normalized;
-
-            // Check if normals are parallel (same or opposite direction)
-            var normalDot = Mathf.Abs(Vector3.Dot(normalA, normalB));
-
-            if (normalDot < 1f - NormalTolerance)
+            if (polygons.Count == 0)
             {
-                return false; // Not coplanar
+                return new List<Vector2>();
             }
 
-            // Check if both triangles are on the same plane
-            var centerA = (a.V0 + a.V1 + a.V2) / 3f;
-            var centerB = (b.V0 + b.V1 + b.V2) / 3f;
-            var planeDistance = Mathf.Abs(Vector3.Dot(normalA, centerB - centerA));
+            // Start with the first polygon
+            var result = polygons[0];
 
-            if (planeDistance > VertexTolerance)
+            // Union with each subsequent polygon
+            for (var i = 1; i < polygons.Count; i++)
             {
-                return false; // Not on the same plane
+                result = UnionTwoPolygons(result, polygons[i]);
             }
 
-            // Check if triangles share the same vertices (within tolerance)
-            var matchCount = 0;
-
-            if (VerticesMatch(a.V0, b.V0) || VerticesMatch(a.V0, b.V1) || VerticesMatch(a.V0, b.V2))
-            {
-                matchCount++;
-            }
-
-            if (VerticesMatch(a.V1, b.V0) || VerticesMatch(a.V1, b.V1) || VerticesMatch(a.V1, b.V2))
-            {
-                matchCount++;
-            }
-
-            if (VerticesMatch(a.V2, b.V0) || VerticesMatch(a.V2, b.V1) || VerticesMatch(a.V2, b.V2))
-            {
-                matchCount++;
-            }
-
-            // If all 3 vertices match, triangles are identical
-            if (matchCount >= 3)
-            {
-                return true;
-            }
-
-            // Check for 2D overlap on the plane
-            if (matchCount >= 2)
-            {
-                // Triangles share an edge, check if they overlap
-                return DoTrianglesOverlap2D(a, b, normalA);
-            }
-
-            return false;
+            return result;
         }
 
-        private static bool VerticesMatch(Vector3 a, Vector3 b)
+        private static List<Vector2> UnionTwoPolygons(List<Vector2> polyA, List<Vector2> polyB)
         {
-            return (a - b).sqrMagnitude < VertexTolerance * VertexTolerance;
+            // Simple convex hull union - works for overlapping convex shapes
+            // For more complex cases, would need a proper polygon clipping library
+
+            var allPoints = new List<Vector2>();
+            allPoints.AddRange(polyA);
+            allPoints.AddRange(polyB);
+
+            // Compute convex hull of all points
+            return ComputeConvexHull(allPoints);
         }
 
-        private static bool DoTrianglesOverlap2D(Triangle a, Triangle b, Vector3 planeNormal)
+        private static List<Vector2> ComputeConvexHull(List<Vector2> points)
         {
-            // Project triangles onto 2D plane and check for overlap
-            Vector3 u, v;
-            GetPlaneBasis(planeNormal, out u, out v);
+            if (points.Count < 3)
+            {
+                return points;
+            }
 
-            var a0 = ProjectToPlane(a.V0, u, v);
-            var a1 = ProjectToPlane(a.V1, u, v);
-            var a2 = ProjectToPlane(a.V2, u, v);
+            // Find the lowest point (and leftmost if tied)
+            var start = 0;
 
-            var b0 = ProjectToPlane(b.V0, u, v);
-            var b1 = ProjectToPlane(b.V1, u, v);
-            var b2 = ProjectToPlane(b.V2, u, v);
+            for (var i = 1; i < points.Count; i++)
+            {
+                if (points[i].y < points[start].y ||
+                    (Mathf.Approximately(points[i].y, points[start].y) && points[i].x < points[start].x))
+                {
+                    start = i;
+                }
+            }
 
-            // Check if centers are very close (simple overlap check)
-            var centerA = (a0 + a1 + a2) / 3f;
-            var centerB = (b0 + b1 + b2) / 3f;
+            // Sort points by polar angle with respect to start point
+            var startPoint = points[start];
+            var sortedPoints = points.OrderBy(p =>
+            {
+                if (p == startPoint)
+                {
+                    return -Mathf.PI;
+                }
 
-            return (centerA - centerB).sqrMagnitude < VertexTolerance * VertexTolerance;
+                return Mathf.Atan2(p.y - startPoint.y, p.x - startPoint.x);
+            }).ThenBy(p => (p - startPoint).sqrMagnitude).ToList();
+
+            // Graham scan
+            var hull = new List<Vector2>();
+
+            foreach (var point in sortedPoints)
+            {
+                while (hull.Count > 1 && Cross(hull[hull.Count - 2], hull[hull.Count - 1], point) <= 0)
+                {
+                    hull.RemoveAt(hull.Count - 1);
+                }
+
+                hull.Add(point);
+            }
+
+            return hull;
+        }
+
+        private static float Cross(Vector2 o, Vector2 a, Vector2 b)
+        {
+            return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
         }
 
         private static void GetPlaneBasis(Vector3 normal, out Vector3 u, out Vector3 v)
         {
-            // Create orthonormal basis for the plane
             if (Mathf.Abs(normal.x) < 0.9f)
             {
                 u = Vector3.Cross(normal, Vector3.right).normalized;
@@ -319,63 +510,75 @@ namespace Game.Editor
             return new Vector2(Vector3.Dot(point, u), Vector3.Dot(point, v));
         }
 
-        private static Mesh BuildMeshFromTriangles(List<Triangle> triangles)
+        private static void AddQuadToMesh(Quad quad, List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs, List<int> indices)
         {
-            var vertices = new List<Vector3>();
-            var normals = new List<Vector3>();
-            var uvs = new List<Vector2>();
-            var indices = new List<int>();
-
-            foreach (var tri in triangles)
-            {
-                var baseIndex = vertices.Count;
-
-                vertices.Add(tri.V0);
-                vertices.Add(tri.V1);
-                vertices.Add(tri.V2);
-
-                normals.Add(tri.N0);
-                normals.Add(tri.N1);
-                normals.Add(tri.N2);
-
-                uvs.Add(tri.UV0);
-                uvs.Add(tri.UV1);
-                uvs.Add(tri.UV2);
-
-                indices.Add(baseIndex);
-                indices.Add(baseIndex + 1);
-                indices.Add(baseIndex + 2);
-            }
-
-            var mesh = new Mesh();
-            mesh.name = CombinedMeshName;
-            mesh.SetVertices(vertices);
-            mesh.SetNormals(normals);
-            mesh.SetUVs(0, uvs);
-            mesh.SetTriangles(indices, 0);
-            mesh.RecalculateBounds();
-
-            return mesh;
+            AddPolygonToMesh(quad.Vertices, quad.Normal, vertices, normals, uvs, indices);
         }
 
-        private struct Triangle
+        private static void AddPolygonToMesh(List<Vector3> polygon, Vector3 normal, List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs, List<int> indices)
         {
-            public Vector3 V0, V1, V2;
-            public Vector3 N0, N1, N2;
-            public Vector2 UV0, UV1, UV2;
-
-            public Triangle(Vector3 v0, Vector3 v1, Vector3 v2, Vector3 n0, Vector3 n1, Vector3 n2, Vector2 uv0, Vector2 uv1, Vector2 uv2)
+            if (polygon.Count < 3)
             {
-                V0 = v0;
-                V1 = v1;
-                V2 = v2;
-                N0 = n0;
-                N1 = n1;
-                N2 = n2;
-                UV0 = uv0;
-                UV1 = uv1;
-                UV2 = uv2;
+                return;
             }
+
+            var baseIndex = vertices.Count;
+
+            // Calculate UV bounds
+            GetPlaneBasis(normal, out var u, out var v);
+            var minU = float.MaxValue;
+            var minV = float.MaxValue;
+            var maxU = float.MinValue;
+            var maxV = float.MinValue;
+
+            foreach (var vert in polygon)
+            {
+                var projU = Vector3.Dot(vert, u);
+                var projV = Vector3.Dot(vert, v);
+                minU = Mathf.Min(minU, projU);
+                minV = Mathf.Min(minV, projV);
+                maxU = Mathf.Max(maxU, projU);
+                maxV = Mathf.Max(maxV, projV);
+            }
+
+            var rangeU = maxU - minU;
+            var rangeV = maxV - minV;
+
+            if (rangeU < Tolerance)
+            {
+                rangeU = 1f;
+            }
+
+            if (rangeV < Tolerance)
+            {
+                rangeV = 1f;
+            }
+
+            // Add vertices
+            foreach (var vert in polygon)
+            {
+                vertices.Add(vert);
+                normals.Add(normal);
+
+                // Calculate UV
+                var projU = Vector3.Dot(vert, u);
+                var projV = Vector3.Dot(vert, v);
+                uvs.Add(new Vector2((projU - minU) / rangeU, (projV - minV) / rangeV));
+            }
+
+            // Triangulate (fan triangulation for convex polygons)
+            for (var i = 1; i < polygon.Count - 1; i++)
+            {
+                indices.Add(baseIndex);
+                indices.Add(baseIndex + i);
+                indices.Add(baseIndex + i + 1);
+            }
+        }
+
+        private class Quad
+        {
+            public List<Vector3> Vertices;
+            public Vector3 Normal;
         }
     }
 }

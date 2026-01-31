@@ -51,6 +51,14 @@ Shader "Game/WaterFlowing"
             ZWrite Off
             Cull Back
 
+            // Stencil buffer to prevent overlapping water planes from double-rendering
+            Stencil
+            {
+                Ref 1
+                Comp NotEqual
+                Pass Replace
+            }
+
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -186,8 +194,8 @@ Shader "Game/WaterFlowing"
                 
                 float foamLines = GetFoamLines(input.flowUV, _Time.y, flowDir);
                 
-                float depthFactor = input.uv.y;
-                half4 waterColor = lerp(_DeepColor, _ShallowColor, depthFactor);
+                // Use uniform color blend (no UV dependency) for seamless tiling
+                half4 waterColor = lerp(_DeepColor, _ShallowColor, 0.5);
                 
                 half4 shadowedColor = waterColor * _ShadowColor;
                 half4 litColor = lerp(shadowedColor, waterColor, cel);
