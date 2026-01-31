@@ -3,17 +3,14 @@ using Game.Events;
 using Game.Input.Events;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Users;
 using VContainer;
-using VContainer.Unity;
 
 namespace Game.Input
 {
     public class InputDeviceTracker : MonoBehaviour
     {
         public static InputDeviceTracker Instance { get; private set; }
-
-        [SerializeField]
-        private PlayerInput _playerInput;
 
         private EventAggregator _eventAggregator;
         private InputDeviceType _currentDeviceType = InputDeviceType.KeyboardMouse;
@@ -26,55 +23,52 @@ namespace Game.Input
         public void Construct(EventAggregator eventAggregator)
         {
             _eventAggregator = eventAggregator;
-        }
-
-        private void Awake()
-        {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
             Instance = this;
         }
 
-        private void Start()
+        private void OnEnable()
         {
-            ResolveDependenciesIfNeeded();
+            Instance = this;
+            InputUser.onChange += OnInputUserChange;
+            DetectInitialDevice();
+        }
 
-            if (_playerInput == null)
-            {
-                _playerInput = FindAnyObjectByType<PlayerInput>();
-            }
+        private void OnDisable()
+        {
+            InputUser.onChange -= OnInputUserChange;
 
-            if (_playerInput != null)
+            if (Instance == this)
             {
-                _currentDeviceType = GetDeviceTypeFromScheme(_playerInput.currentControlScheme);
-                _playerInput.onControlsChanged += OnControlsChanged;
+                Instance = null;
             }
         }
 
-        private void ResolveDependenciesIfNeeded()
+        private void DetectInitialDevice()
         {
-            if (_eventAggregator != null)
+            foreach (var user in InputUser.all)
+            {
+                if (user.controlScheme.HasValue)
+                {
+                    var deviceType = GetDeviceTypeFromScheme(user.controlScheme.Value.name);
+                    _currentDeviceType = deviceType;
+                    return;
+                }
+            }
+        }
+
+        private void OnInputUserChange(InputUser user, InputUserChange change, InputDevice device)
+        {
+            if (change != InputUserChange.ControlSchemeChanged)
             {
                 return;
             }
 
-            var lifetimeScope = FindAnyObjectByType<LifetimeScope>();
-
-            if (lifetimeScope == null)
+            if (!user.controlScheme.HasValue)
             {
                 return;
             }
 
-            _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
-        }
-
-        private void OnControlsChanged(PlayerInput playerInput)
-        {
-            var newDeviceType = GetDeviceTypeFromScheme(playerInput.currentControlScheme);
+            var newDeviceType = GetDeviceTypeFromScheme(user.controlScheme.Value.name);
 
             if (newDeviceType == _currentDeviceType)
             {
@@ -103,19 +97,6 @@ namespace Game.Input
             }
 
             return InputDeviceType.KeyboardMouse;
-        }
-
-        private void OnDestroy()
-        {
-            if (_playerInput != null)
-            {
-                _playerInput.onControlsChanged -= OnControlsChanged;
-            }
-
-            if (Instance == this)
-            {
-                Instance = null;
-            }
         }
     }
 }

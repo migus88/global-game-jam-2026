@@ -23,25 +23,36 @@ namespace Game.Input
         private Image _image;
 
         private EventAggregator _eventAggregator;
+        private InputDeviceTracker _inputDeviceTracker;
         private bool _isSubscribedToTracker;
 
         [Inject]
-        public void Construct(EventAggregator eventAggregator)
+        public void Construct(EventAggregator eventAggregator, InputDeviceTracker inputDeviceTracker)
         {
             _eventAggregator = eventAggregator;
+            _inputDeviceTracker = inputDeviceTracker;
         }
 
         private void Start()
         {
             ResolveDependenciesIfNeeded();
             AutoDetectRenderer();
+        }
+
+        private void OnEnable()
+        {
             SubscribeToDeviceChanges();
             UpdateSprite();
         }
 
+        private void OnDisable()
+        {
+            UnsubscribeFromDeviceChanges();
+        }
+
         private void ResolveDependenciesIfNeeded()
         {
-            if (_eventAggregator != null)
+            if (_eventAggregator != null && _inputDeviceTracker != null)
             {
                 return;
             }
@@ -54,6 +65,7 @@ namespace Game.Input
             }
 
             _eventAggregator ??= lifetimeScope.Container.Resolve<EventAggregator>();
+            _inputDeviceTracker ??= lifetimeScope.Container.Resolve<InputDeviceTracker>();
         }
 
         private void AutoDetectRenderer()
@@ -73,10 +85,25 @@ namespace Game.Input
         {
             _eventAggregator?.Subscribe<InputDeviceChangedEvent>(OnInputDeviceChanged);
 
-            if (InputDeviceTracker.Instance != null)
+            var tracker = _inputDeviceTracker != null ? _inputDeviceTracker : InputDeviceTracker.Instance;
+            
+            if (tracker != null)
             {
-                InputDeviceTracker.Instance.DeviceChanged += OnDeviceChanged;
+                tracker.DeviceChanged += OnDeviceChanged;
                 _isSubscribedToTracker = true;
+            }
+        }
+
+        private void UnsubscribeFromDeviceChanges()
+        {
+            _eventAggregator?.Unsubscribe<InputDeviceChangedEvent>(OnInputDeviceChanged);
+
+            var tracker = _inputDeviceTracker != null ? _inputDeviceTracker : InputDeviceTracker.Instance;
+
+            if (_isSubscribedToTracker && tracker != null)
+            {
+                tracker.DeviceChanged -= OnDeviceChanged;
+                _isSubscribedToTracker = false;
             }
         }
 
@@ -133,12 +160,7 @@ namespace Game.Input
 
         private void OnDestroy()
         {
-            _eventAggregator?.Unsubscribe<InputDeviceChangedEvent>(OnInputDeviceChanged);
-
-            if (_isSubscribedToTracker && InputDeviceTracker.Instance != null)
-            {
-                InputDeviceTracker.Instance.DeviceChanged -= OnDeviceChanged;
-            }
+            UnsubscribeFromDeviceChanges();
         }
     }
 }
