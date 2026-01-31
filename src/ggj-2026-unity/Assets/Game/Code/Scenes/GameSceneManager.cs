@@ -210,5 +210,10 @@ namespace Game.Scenes
         {
             _currentLoadingScene = loadingScene;
         }
+
+        public void RegisterGameScene(SceneInstance gameScene)
+        {
+            _currentGameScene = gameScene;
+        }
     }
 }

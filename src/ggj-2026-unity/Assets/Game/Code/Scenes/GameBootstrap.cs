@@ -72,6 +72,21 @@ namespace Game.Scenes
 
             GameSceneManager.Instance?.RegisterLoadingScene(loadingScene);
 
+            if (BootstrapLoader.HasRequestedScene)
+            {
+                await LoadRequestedSceneAsync();
+            }
+            else
+            {
+                await LoadMainMenuAsync();
+            }
+
+            IsInitialized = true;
+            Debug.Log("GameBootstrap: Game initialized successfully");
+        }
+
+        private async UniTask LoadMainMenuAsync()
+        {
             var mainMenuScene = await _sceneLoader.LoadMainMenuSceneAsync();
 
             if (mainMenuScene.Scene.IsValid())
@@ -80,9 +95,29 @@ namespace Game.Scenes
                 _eventAggregator?.Publish(new SceneLoadedEvent(mainMenuScene.Scene.name));
                 _eventAggregator?.Publish(new MainMenuReadyEvent());
             }
+        }
 
-            IsInitialized = true;
-            Debug.Log("GameBootstrap: Game initialized successfully");
+        private async UniTask LoadRequestedSceneAsync()
+        {
+            var requestedSceneName = BootstrapLoader.RequestedSceneName;
+            BootstrapLoader.ClearRequestedScene();
+
+            Debug.Log($"GameBootstrap: Loading requested scene '{requestedSceneName}'");
+
+            var gameScene = await _sceneLoader.LoadGameSceneByNameAsync(requestedSceneName);
+
+            if (gameScene.Scene.IsValid())
+            {
+                GameSceneManager.Instance?.RegisterGameScene(gameScene);
+                _eventAggregator?.Publish(new SceneLoadedEvent(gameScene.Scene.name));
+                _eventAggregator?.Publish(new LoadingCompletedEvent(isInGame: true));
+                _eventAggregator?.Publish(new GameSceneReadyEvent());
+            }
+            else
+            {
+                Debug.LogWarning($"GameBootstrap: Failed to load requested scene '{requestedSceneName}', falling back to main menu");
+                await LoadMainMenuAsync();
+            }
         }
     }
 }

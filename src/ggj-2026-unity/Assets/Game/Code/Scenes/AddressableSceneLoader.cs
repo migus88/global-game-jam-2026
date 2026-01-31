@@ -51,6 +51,29 @@ namespace Game.Scenes
             return await LoadSceneByLocationAsync(selectedLocation);
         }
 
+        public async UniTask<SceneInstance> LoadGameSceneByNameAsync(string sceneName)
+        {
+            var locations = await LoadSceneLocationsAsync(_configuration.GameSceneLabel);
+
+            if (locations == null || locations.Count == 0)
+            {
+                Debug.LogError($"No scenes found with label '{_configuration.GameSceneLabel}'");
+                return default;
+            }
+
+            foreach (var location in locations)
+            {
+                if (location.PrimaryKey.Contains(sceneName))
+                {
+                    Debug.Log($"Loading game scene by name: {location.PrimaryKey}");
+                    return await LoadSceneByLocationAsync(location);
+                }
+            }
+
+            Debug.LogError($"Scene '{sceneName}' not found in game scenes");
+            return default;
+        }
+
         public async UniTask UnloadAllScenesExceptAsync(string sceneNameToKeep)
         {
             var handlesToRemove = new List<AsyncOperationHandle<SceneInstance>>();
